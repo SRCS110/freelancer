@@ -62,8 +62,13 @@ function financesHTML() {
   const tax      = Math.max(0, (income - expenses) * taxRate);
 
   const catTotals = TAX_CATS
-    .map(cat => ({ cat, total: periodEntries.filter(f => f.category === cat).reduce((s, f) => s + Number(f.amount), 0) }))
-    .filter(c => c.total > 0);
+    .map(cat => {
+      const entries  = periodEntries.filter(f => f.category === cat);
+      const catIncome  = entries.filter(f => f.type === "income").reduce((s, f)  => s + Number(f.amount), 0);
+      const catExpense = entries.filter(f => f.type === "expense").reduce((s, f) => s + Number(f.amount), 0);
+      return { cat, income: catIncome, expense: catExpense, net: catIncome - catExpense };
+    })
+    .filter(c => c.income > 0 || c.expense > 0);
 
   // Per-project income summary
   const byProject = {};
@@ -108,10 +113,13 @@ function financesHTML() {
   <div class="card">
     <div class="section-title" style="margin-bottom:14px">By Tax Category</div>
     <div style="display:flex;flex-direction:column;gap:8px">
-      ${catTotals.map(({ cat, total }) => `
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--bg);border-radius:8px;border:1px solid var(--border)">
-        <span style="font-size:12px;color:var(--text-muted)">${cat}</span>
-        <span style="font-weight:700;color:var(--text);font-family:'Space Grotesk',sans-serif">${usd(total)}</span>
+      ${catTotals.map(({ cat, income, expense, net }) => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--bg);border-radius:4px;border:1px solid var(--border)">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-muted)">${cat}</span>
+        <div style="display:flex;gap:12px;align-items:center">
+          ${income > 0  ? `<span style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:var(--accent)">+${usd(income)}</span>`  : ""}
+          ${expense > 0 ? `<span style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:var(--danger)">-${usd(expense)}</span>` : ""}
+        </div>
       </div>`).join("")}
     </div>
   </div>` : `<div class="card"><div class="empty-text" style="color:#2a3048;text-align:center;padding:20px">No entries this period.</div></div>`}
