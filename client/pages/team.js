@@ -303,42 +303,71 @@ window.cancelInvite = async function(id) {
 // ── Accept invite (runs on boot if ?invite= param present) ───
 window.handleInviteToken = async function() {
   // Check URL param first, then sessionStorage (set before auth redirect)
-  const urlToken  = new URLSearchParams(window.location.search).get("invite");
+  const urlToken   = new URLSearchParams(window.location.search).get("invite");
   const savedToken = sessionStorage.getItem("fh_pending_invite");
-  const token = urlToken && urlToken !== "pending" ? urlToken : savedToken;
+  const token      = urlToken && urlToken !== "pending" ? urlToken : savedToken;
   if (!token) return;
 
-  // Clear the stored token immediately to prevent repeat processing
+  // Clear immediately to prevent re-processing on refresh
   sessionStorage.removeItem("fh_pending_invite");
   window.history.replaceState({}, "", window.location.pathname);
 
   try {
-    // Fetch invite by token (public read needed — or use Edge Function)
     const invites = await db.list("team_invites", `token=eq.${token}&accepted=eq.false`);
     const invite  = invites?.[0];
-    if (!invite) { alert("This invite link is invalid or has expired."); return; }
-    if (new Date(invite.expires_at) < new Date()) { alert("This invite link has expired."); return; }
 
-    // Add user to team
-    await db.insert("team_members", {
-      team_id:   invite.team_id,
-      user_id:   STATE.user.id,
-      role:      invite.role,
-    });
+    if (!invite) {
+      // Check if already a member — may have clicked link twice
+      const existing = (STATE.data.team_members || []).find(m => m.user_id === STATE.user.id);
+      if (existing) return; // Already on team, silently skip
+      showModal(`
+<div class="modal-header"><div class="modal-title">invite not found</div><button class="modal-close" onclick="closeModal()">×</button></div>
+<div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-muted);margin-bottom:20px;line-height:1.6">
+  This invite link is invalid, has already been used, or has expired.<br/>Ask the team owner to send a new one.
+</div>
+<div class="modal-actions"><button class="btn btn-primary" onclick="closeModal()">ok</button></div>`);
+      return;
+    }
 
-    // Mark invite accepted
+    if (new Date(invite.expires_at) < new Date()) {
+      showModal(`
+<div class="modal-header"><div class="modal-title">invite expired</div><button class="modal-close" onclick="closeModal()">×</button></div>
+<div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-muted);margin-bottom:20px;line-height:1.6">
+  This invite link expired. Ask the team owner to send a new one.
+</div>
+<div class="modal-actions"><button class="btn btn-primary" onclick="closeModal()">ok</button></div>`);
+      return;
+    }
+
+    // Check if already a member of this team
+    const alreadyMember = (STATE.data.team_members || [])
+      .find(m => m.user_id === STATE.user.id && m.team_id === invite.team_id);
+
+    if (!alreadyMember) {
+      await db.insert("team_members", {
+        team_id: invite.team_id,
+        user_id: STATE.user.id,
+        email:   STATE.user.email,
+        role:    invite.role,
+      });
+    }
+
+    // Mark invite accepted regardless
     await db.update("team_invites", invite.id, { accepted: true });
-
-    // Clear URL param
-    window.history.replaceState({}, "", window.location.pathname);
 
     await loadAll();
     showModal(`
-<div class="modal-header"><div class="modal-title">welcome to the team!</div><button class="modal-close" onclick="closeModal()">×</button></div>
-<div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-muted);margin-bottom:20px;line-height:1.6">
-  You've joined the team as <strong style="color:var(--accent)">${invite.role}</strong>. You now have access to the shared workspace.
+<div class="modal-header">
+  <div class="modal-title">welcome to the team!</div>
+  <button class="modal-close" onclick="closeModal()">×</button>
 </div>
-<div class="modal-actions"><button class="btn btn-primary" onclick="closeModal()">get started</button></div>`);
+<div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-muted);margin-bottom:20px;line-height:1.6">
+  You've joined as <strong style="color:var(--accent)">${invite.role}</strong>.
+  You now have access to the shared workspace.
+</div>
+<div class="modal-actions">
+  <button class="btn btn-primary" onclick="closeModal();navigate('dashboard')">get started →</button>
+</div>`);
   } catch(e) {
     console.warn("Invite handling error:", e.message);
   }
