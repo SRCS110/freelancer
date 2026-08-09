@@ -69,7 +69,7 @@ function businessPlanHTML() {
     <div class="page-sub">Memorialize your strategy — ${updatedAt}</div>
   </div>
   <div class="btn-row">
-    <button class="btn btn-ghost" onclick="exportBP()">export</button>
+    <button class="btn btn-ghost" onclick="navigate('settings')">← back to profile</button>
     <button class="btn btn-primary" id="bp-save-btn" onclick="saveBP()">Save Plan</button>
   </div>
 </div>
