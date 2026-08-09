@@ -205,12 +205,21 @@ function waitForAuth(cb, tries = 0) {
   else console.error('[login] auth.js never loaded');
 }
 
-// Auto-switch to signup mode if coming from upgrade modal
-if (new URLSearchParams(location.search).get('signup') === 'true') {
+// Auto-switch to signup mode if coming from upgrade modal or invite
+const _lp = new URLSearchParams(location.search);
+if (_lp.get('signup') === 'true' || _lp.get('invite') === 'pending') {
   document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
       const signupTab = document.querySelector('[data-mode="signup"]');
       if (signupTab) signupTab.click();
+      // Show invite message
+      if (_lp.get('invite') === 'pending') {
+        const msg = document.getElementById('authMsg');
+        if (msg) {
+          msg.textContent = "You've been invited to a team. Sign in or create an account to join.";
+          msg.className = 'msg info';
+        }
+      }
     }, 100);
   });
 }
