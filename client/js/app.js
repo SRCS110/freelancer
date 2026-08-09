@@ -95,8 +95,7 @@ window.doSignOut   = function() { Auth.signOut(); };
 const SIDEBAR_SECTIONS = [
   { id: "workspace", icon: "◈", label: "Workspace",  pages: ["dashboard","clients","projects"] },
   { id: "money",     icon: "◇", label: "Money",      pages: ["finances","invoices"] },
-  { id: "business",  icon: "◆", label: "Business",   pages: ["business-plan","brainstorm"] },
-  { id: "tools",     icon: "◉", label: "Tools",      pages: ["bookmarks","tech-stack"] },
+  { id: "tools",     icon: "◉", label: "Tools",      pages: ["bookmarks","tech-stack","brainstorm"] },
   { id: "ops",       icon: "◳", label: "Operations", pages: ["workflows","team"] },
 ];
 
@@ -110,13 +109,10 @@ const SECTION_ITEMS = {
     { id: "finances",     label: "Finances",     icon: "◇" },
     { id: "invoices",     label: "Invoices",     icon: "◻" },
   ],
-  business: [
-    { id: "business-plan",label: "Business Plan",icon: "◈" },
-    { id: "brainstorm",   label: "Brainstorm",   icon: "◆" },
-  ],
   tools: [
     { id: "bookmarks",    label: "Bookmarks",    icon: "◉" },
     { id: "tech-stack",   label: "Tech Stack",   icon: "◳" },
+    { id: "brainstorm",   label: "Brainstorm",   icon: "◆" },
   ],
   ops: [
     { id: "workflows",    label: "Workflows",    icon: "◳" },
@@ -314,13 +310,10 @@ function _drawerNav() {
       { id: "finances",      label: "Finances",     icon: "◇" },
       { id: "invoices",      label: "Invoices",     icon: "◻" },
     ]},
-    { label: "Business", items: [
-      { id: "business-plan", label: "Business Plan",icon: "◈" },
-      { id: "brainstorm",    label: "Brainstorm",   icon: "◆" },
-    ]},
     { label: "Tools", items: [
       { id: "bookmarks",     label: "Bookmarks",    icon: "◉" },
       { id: "tech-stack",    label: "Tech Stack",   icon: "◳" },
+      { id: "brainstorm",    label: "Brainstorm",   icon: "◆" },
     ]},
     { label: "Operations", items: [
       { id: "workflows",     label: "Workflows",    icon: "◳" },
@@ -490,6 +483,11 @@ window._sectionAdd = function(section) {
     onclick="closeModal();navigate('tech-stack');setTimeout(()=>openStackModal(null),100)">
     <span style="font-family:'JetBrains Mono',monospace;font-size:14px">◳</span>
     <span>Add Tech Stack Item</span>
+  </button>
+  <button class="btn btn-ghost" style="justify-content:flex-start;gap:12px;padding:12px 16px"
+    onclick="closeModal();navigate('brainstorm');setTimeout(()=>newBsNote(),100)">
+    <span style="font-family:'JetBrains Mono',monospace;font-size:14px">◆</span>
+    <span>New Brainstorm Note</span>
   </button>
 </div>`);
       break;
