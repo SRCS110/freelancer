@@ -197,8 +197,17 @@ function sidebarHTML() {
 
 <div class="sidebar-panel">
   ${demoBanner}
+
+  <!-- Company header -->
+  <div class="panel-header">
+    <div class="panel-company">${STATE.data.user_settings?.business_name || STATE.data.business_plan?.business_name || "Freelancer"}</div>
+    <div class="panel-os-label">Business OS</div>
+  </div>
+
+  <!-- Section label -->
   <div class="panel-section-title">${section?.label || ""}</div>
 
+  <!-- Nav items -->
   ${items.map(n => `
   <div class="panel-item${STATE.page === n.id ? " active" : ""}" onclick="navigate('${n.id}')">
     <span class="panel-icon">${n.icon}</span>
@@ -207,6 +216,7 @@ function sidebarHTML() {
       ? `<span class="nav-badge" style="margin-left:auto">${overdueCt}</span>` : ""}
   </div>`).join("")}
 
+  <!-- Recents -->
   ${recents.length > 0 ? `
   <div class="panel-recents-header">
     <span>Recent</span>
@@ -220,12 +230,13 @@ function sidebarHTML() {
       <div class="panel-recent-label">${r.label}</div>
       ${r.sub ? `<div class="panel-recent-sub">${r.sub}</div>` : ""}
     </div>
-    ${r.badge ? `<span class="nav-badge" style="margin-left:auto;font-size:9px;background:color-mix(in srgb,var(--accent) 15%,transparent);color:var(--accent)">${r.badge}</span>` : ""}
+    ${r.badge ? `<span style="margin-left:auto;font-size:9px;font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--accent)">${r.badge}</span>` : ""}
   </div>`).join("")}` : ""}
 
+  <!-- Footer: theme toggle + sign out -->
   <div class="panel-footer">
     <div class="theme-toggle" onclick="toggleTheme()">
-      <span>${_isLight() ? "light" : "dark"}</span>
+      <span>${_isLight() ? "light mode" : "dark mode"}</span>
       <div class="theme-toggle-track${_isLight() ? " on" : ""}">
         <div class="theme-toggle-thumb"></div>
       </div>
