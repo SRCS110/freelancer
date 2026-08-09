@@ -302,8 +302,15 @@ window.cancelInvite = async function(id) {
 
 // ── Accept invite (runs on boot if ?invite= param present) ───
 window.handleInviteToken = async function() {
-  const token = new URLSearchParams(window.location.search).get("invite");
+  // Check URL param first, then sessionStorage (set before auth redirect)
+  const urlToken  = new URLSearchParams(window.location.search).get("invite");
+  const savedToken = sessionStorage.getItem("fh_pending_invite");
+  const token = urlToken && urlToken !== "pending" ? urlToken : savedToken;
   if (!token) return;
+
+  // Clear the stored token immediately to prevent repeat processing
+  sessionStorage.removeItem("fh_pending_invite");
+  window.history.replaceState({}, "", window.location.pathname);
 
   try {
     // Fetch invite by token (public read needed — or use Edge Function)
