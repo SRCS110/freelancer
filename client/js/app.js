@@ -46,6 +46,15 @@ async function loadAll() {
     };
   } catch (e) {
     console.error("loadAll error:", e.message);
+    // RPC not available yet — show empty state rather than crash
+    STATE.data = STATE.data || {
+      clients: [], projects: [], finances: [], invoices: [],
+      business_plan: null, user_settings: null, bookmarks: [],
+      tech_stack: [], workflow_templates: [], workflow_steps: [],
+      workflow_runs: [], workflow_run_steps: [], project_todos: [],
+      project_todo_sections: [], client_documents: [], brainstorm: [],
+      teams: [], team_members: [], team_invites: [],
+    };
   }
   STATE.loading = false;
   render();

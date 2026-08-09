@@ -152,7 +152,8 @@ async function _markOnboarded() {
     if (s?.id) {
       await db.update("user_settings", s.id, { onboarded: true });
     } else {
-      await db.insert("user_settings", { onboarded: true });
+      // Use upsert to avoid duplicate key if row already exists
+      await db.upsert("user_settings", { onboarded: true }, "user_id");
     }
   } catch(e) {
     console.warn("Could not mark onboarded:", e.message);
