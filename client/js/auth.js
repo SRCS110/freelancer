@@ -8,8 +8,8 @@
  * Find them at: Supabase Dashboard → Settings → API
  */
 
-const SUPABASE_URL  = 'https://mbprxgxtpwbaelrjwzam.supabase.co';  // https://xxxx.supabase.co
-const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1icHJ4Z3h0cHdiYWVscmp3emFtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU1MzAwNzYsImV4cCI6MjEwMTEwNjA3Nn0.4WFvWXlLVowHx0-OrQoT96V7WDnRx0SDRsGj7pB_-BA';     // eyJhbGci...
+const SUPABASE_URL  = 'YOUR_SUPABASE_PROJECT_URL';  // https://xxxx.supabase.co
+const SUPABASE_ANON = 'YOUR_SUPABASE_ANON_KEY';     // eyJhbGci...
 
 /* ── Internal client singleton ── */
 let _client = null;
@@ -180,8 +180,12 @@ const db = {
 
   insert: (table, body) => {
     // Auto-inject user_id so RLS policies are satisfied
+    // Skip tables that use a different ownership column
+    const SKIP_INJECT = ["teams"]; // teams uses owner_id, set explicitly by caller
     const uid = _uid();
-    const payload = uid && !body.user_id ? { ...body, user_id: uid } : body;
+    const payload = uid && !body.user_id && !SKIP_INJECT.includes(table)
+      ? { ...body, user_id: uid }
+      : body;
     return sbFetch(`/rest/v1/${table}`, {
       method: 'POST',
       prefer: 'return=representation',
@@ -197,8 +201,11 @@ const db = {
     }),
 
   upsert: (table, body, onConflict = 'user_id') => {
+    const SKIP_INJECT = ["teams"];
     const uid = _uid();
-    const payload = uid && !body.user_id ? { ...body, user_id: uid } : body;
+    const payload = uid && !body.user_id && !SKIP_INJECT.includes(table)
+      ? { ...body, user_id: uid }
+      : body;
     return sbFetch(`/rest/v1/${table}?on_conflict=${onConflict}`, {
       method: 'POST',
       prefer: 'return=representation,resolution=merge-duplicates',
