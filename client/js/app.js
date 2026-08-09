@@ -19,7 +19,7 @@ let STATE = {
 async function loadAll() {
   if (!STATE.user) return;
   try {
-    const [clients, projects, finances, invoices, bpList, settingsList, bookmarks, techStack, wfTemplates, wfSteps, wfRuns, wfRunSteps, projectTodos, brainstormNotes, clientDocs] = await Promise.all([
+    const [clients, projects, finances, invoices, bpList, settingsList, bookmarks, techStack, wfTemplates, wfSteps, wfRuns, wfRunSteps, projectTodos, brainstormNotes, clientDocs, todoSections, teams, teamMembers, teamInvites] = await Promise.all([
       db.list("clients"),
       db.list("projects"),
       db.list("finances"),
@@ -35,6 +35,10 @@ async function loadAll() {
       db.list("project_todos").catch(() => []),
       db.list("brainstorm").catch(() => []),
       db.list("client_documents").catch(() => []),
+      db.list("project_todo_sections").catch(() => []),
+      db.list("teams").catch(() => []),
+      db.list("team_members").catch(() => []),
+      db.list("team_invites").catch(() => []),
     ]);
     STATE.data = {
       clients:             clients    || [],
@@ -51,7 +55,11 @@ async function loadAll() {
       workflow_run_steps: wfRunSteps   || [],
       project_todos:      projectTodos    || [],
       brainstorm:         brainstormNotes || [],
-      client_documents:   clientDocs      || [],
+      client_documents:     clientDocs    || [],
+      project_todo_sections: todoSections  || [],
+      teams:                 teams          || [],
+      team_members:          teamMembers    || [],
+      team_invites:          teamInvites    || [],
     };
   } catch (e) {
     console.error("loadAll error:", e.message);
@@ -91,6 +99,7 @@ function sidebarHTML() {
     { id: "tech-stack",    label: "Tech Stack",     icon: "◉" },
     { id: "workflows",     label: "Workflows",      icon: "◳" },
     { id: "brainstorm",    label: "Brainstorm",     icon: "◈" },
+    { id: "team",          label: "Team",           icon: "◎" },
   ];
 
   return `
@@ -161,6 +170,7 @@ function _drawerNav() {
     { id: "tech-stack",    label: "Tech Stack",    icon: "◉" },
     { id: "workflows",     label: "Workflows",     icon: "◳" },
     { id: "brainstorm",    label: "Brainstorm",    icon: "◈" },
+    { id: "team",          label: "Team",          icon: "◎" },
   ];
   const overdueCt = STATE.data.invoices.filter(i => i.status === "Overdue").length;
   const s   = STATE.data.user_settings;
@@ -244,6 +254,7 @@ function render() {
     else if (STATE.page === "tech-stack")                        content = techStackHTML();
     else if (STATE.page === "workflows")                         content = workflowsHTML();
     else if (STATE.page === "brainstorm")                        content = brainstormHTML();
+    else if (STATE.page === "team")                              content = teamHTML();
   } catch(e) {
     console.error("render error on page", STATE.page, ":", e.message, e.stack);
     content = `<div class="card" style="border-color:var(--danger)">
@@ -307,5 +318,6 @@ waitForAuth(async function() {
   });
 
   await loadAll();
+  await handleInviteToken();
   await runOnboarding();
 });
