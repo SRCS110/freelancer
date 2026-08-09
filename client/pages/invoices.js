@@ -61,7 +61,53 @@ function invoicesHTML() {
 }
 
 window.setInvFilter    = function(f) { window._invFilter = f; render(); };
-window.updateInvStatus = async function(id, status) { await db.update("invoices", id, { status }); loadAll(); };
+window.updateInvStatus = async function(id, status) {
+  await db.update("invoices", id, { status });
+
+  // When marked Paid — auto-create a finance income entry if one doesn't exist
+  if (status === "Paid") {
+    const inv = STATE.data.invoices.find(i => i.id === id);
+    if (inv) {
+      const desc = `Invoice ${inv.invoice_number}${inv.client_name ? " — " + inv.client_name : ""}`;
+      const alreadyLogged = (STATE.data.finances || []).some(f =>
+        f.description === desc && f.type === "income"
+      );
+      if (!alreadyLogged) {
+        try {
+          await db.insert("finances", {
+            type:        "income",
+            description: desc,
+            amount:      Number(inv.amount),
+            category:    "Revenue",
+            date:        new Date().toISOString().slice(0, 10),
+            client_id:   inv.client_id   || null,
+            project_id:  inv.project_id  || null,
+            notes:       `Auto-logged when invoice marked paid`,
+          });
+        } catch(e) {
+          console.warn("Could not auto-log invoice payment:", e.message);
+        }
+      }
+    }
+  }
+
+  // When marked Void — optionally remove the auto-logged income entry
+  if (status === "Void") {
+    const inv = STATE.data.invoices.find(i => i.id === id);
+    if (inv) {
+      const desc = `Invoice ${inv.invoice_number}${inv.client_name ? " — " + inv.client_name : ""}`;
+      const existing = (STATE.data.finances || []).find(f =>
+        f.description === desc && f.type === "income" &&
+        f.notes === "Auto-logged when invoice marked paid"
+      );
+      if (existing) {
+        try { await db.delete("finances", existing.id); } catch(e) {}
+      }
+    }
+  }
+
+  await loadAll();
+};
 window.deleteInv       = async function(id) { if (!confirm("Delete this invoice?")) return; await db.delete("invoices", id); loadAll(); };
 
 // ── Print / PDF export ─────────────────────────────────────────
