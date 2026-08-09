@@ -141,6 +141,23 @@ button { font-family: 'Inter', sans-serif; cursor: pointer; border: none; border
 }
 .rail-spacer { flex: 1; }
 
+/* ── Hover-expand sidebar on desktop ────────────────────────── */
+@media (min-width: 641px) {
+  .sidebar-panel {
+    transition: width .2s cubic-bezier(.4,0,.2,1), opacity .2s;
+  }
+  /* Collapsed state — panel hidden, triggered by JS class on #app */
+  #app.sidebar-collapsed .sidebar-panel {
+    width: 0;
+    opacity: 0;
+    overflow: hidden;
+    border-right: none;
+  }
+  #app.sidebar-collapsed .sidebar-rail {
+    border-right: 1px solid var(--border);
+  }
+}
+
 /* ── Panel (expanded section) ────────────────────────────────── */
 .sidebar-panel {
   width: 224px;
