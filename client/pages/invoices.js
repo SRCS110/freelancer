@@ -129,8 +129,15 @@ window.emailInvoice = async function(id) {
   if (!inv) return;
 
   const items = await _fetchItems(id);
-  const bizName = STATE.data.user_settings?.business_name ||
-                  STATE.data.business_plan?.business_name || "Freelancer";
+  const s       = STATE.data.user_settings || {};
+  const bizName = s.business_name || STATE.data.business_plan?.business_name || "Freelancer";
+  const bizAddr = [
+    s.address_street,
+    [s.address_city, s.address_state, s.address_zip].filter(Boolean).join(", "),
+    s.address_country,
+  ].filter(Boolean).join("\n");
+  const bizPhone = s.business_phone || "";
+  const bizEmail = s.business_email || "";
 
   // Build line items text
   const itemLines = items.length > 0
@@ -150,7 +157,8 @@ Please find your invoice details below.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 INVOICE #${inv.invoice_number}
-From: ${bizName}
+From: ${bizName}${bizAddr ? "\n" + bizAddr : ""}${bizPhone ? "\nPhone: " + bizPhone : ""}${bizEmail ? "\nEmail: " + bizEmail : ""}
+
 To: ${inv.client_name || ""}
 Project: ${inv.project_name || ""}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -185,8 +193,15 @@ window.printInvoice = async function(id) {
   const inv   = STATE.data.invoices.find(i => i.id === id);
   if (!inv) return;
   const items = await _fetchItems(id);
-  const bizName = STATE.data.user_settings?.business_name ||
-                  STATE.data.business_plan?.business_name || "Freelancer";
+  const s       = STATE.data.user_settings || {};
+  const bizName = s.business_name || STATE.data.business_plan?.business_name || "Freelancer";
+  const bizAddr = [
+    s.address_street,
+    [s.address_city, s.address_state, s.address_zip].filter(Boolean).join(", "),
+    s.address_country,
+  ].filter(Boolean).join("\n");
+  const bizPhone = s.business_phone || "";
+  const bizEmail = s.business_email || "";
 
   // Load jsPDF if not already loaded
   if (!window.jspdf) {
@@ -215,10 +230,20 @@ window.printInvoice = async function(id) {
   };
 
   // ── Header ──────────────────────────────────────────────────
-  text(bizName, M, y + 6, { size: 18, bold: true, color: "#059669" });
+  text(bizName, M, y + 6, { size: 16, bold: true, color: "#059669" });
   text("INVOICE", W - M, y + 4, { size: 20, bold: true, align: "right", color: "#18181b" });
   text(`#${inv.invoice_number}`, W - M, y + 10, { size: 11, align: "right", color: "#71717a" });
-  y += 18;
+  y += 10;
+  // Business address block
+  if (bizAddr) {
+    bizAddr.split("\n").forEach(line => {
+      y += 4;
+      text(line, M, y, { size: 8, color: "#71717a" });
+    });
+  }
+  if (bizPhone) { y += 4; text(bizPhone, M, y, { size: 8, color: "#71717a" }); }
+  if (bizEmail) { y += 4; text(bizEmail, M, y, { size: 8, color: "#059669" }); }
+  y += 10;
   line(M, y, W - M, y);
   y += 6;
 

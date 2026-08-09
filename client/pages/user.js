@@ -88,6 +88,40 @@ function userSettingsHTML() {
     <input id="us-business-name" value="${s.business_name || ""}" placeholder="Acme Freelance Co."/>
     <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Used on invoice headers and exports.</div>
   </div>
+
+  <div class="form-group">
+    <label class="form-label">Street Address</label>
+    <input id="us-address-street" value="${s.address_street || ""}" placeholder="123 Main Street, Suite 100"/>
+  </div>
+  <div class="form-row">
+    <div class="form-group">
+      <label class="form-label">City</label>
+      <input id="us-address-city" value="${s.address_city || ""}" placeholder="San Francisco"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">State / Province</label>
+      <input id="us-address-state" value="${s.address_state || ""}" placeholder="CA"/>
+    </div>
+  </div>
+  <div class="form-row">
+    <div class="form-group">
+      <label class="form-label">ZIP / Postal Code</label>
+      <input id="us-address-zip" value="${s.address_zip || ""}" placeholder="94102"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Country</label>
+      <input id="us-address-country" value="${s.address_country || ""}" placeholder="United States"/>
+    </div>
+  </div>
+  <div class="form-group">
+    <label class="form-label">Business Phone</label>
+    <input id="us-business-phone" value="${s.business_phone || ""}" placeholder="+1 555 000 0000"/>
+  </div>
+  <div class="form-group">
+    <label class="form-label">Business Email</label>
+    <input id="us-business-email" value="${s.business_email || ""}" placeholder="billing@yourbusiness.com"/>
+    <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Shown on invoices as the payment contact.</div>
+  </div>
 </div>
 
 <!-- ── Preferences ────────────────────────────────────────── -->
@@ -193,6 +227,13 @@ window.saveUserSettings = async function() {
     const body = {
       display_name:       document.getElementById("us-display-name").value.trim(),
       business_name:      document.getElementById("us-business-name").value.trim(),
+      address_street:     document.getElementById("us-address-street").value.trim(),
+      address_city:       document.getElementById("us-address-city").value.trim(),
+      address_state:      document.getElementById("us-address-state").value.trim(),
+      address_zip:        document.getElementById("us-address-zip").value.trim(),
+      address_country:    document.getElementById("us-address-country").value.trim(),
+      business_phone:     document.getElementById("us-business-phone").value.trim(),
+      business_email:     document.getElementById("us-business-email").value.trim(),
       currency:           document.getElementById("us-currency").value,
       tax_rate:           parseFloat(document.getElementById("us-tax-rate").value) || 25,
       timezone:           document.getElementById("us-timezone").value,
