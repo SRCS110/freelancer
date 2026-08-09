@@ -50,7 +50,7 @@ function invoicesHTML() {
           <td><div class="btn-row" style="flex-wrap:wrap">
             <button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="printInvoice('${inv.id}')">⎙ print / save</button>
             ${inv.status !== "Paid" && inv.status !== "Void" ? `<button class="btn btn-ghost btn-sm" style="color:#10b981;border-color:#10b98144;font-size:11px" onclick="updateInvStatus('${inv.id}','Paid')">✓ Paid</button>` : ""}
-            ${inv.status === "Draft" ? `<button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="updateInvStatus('${inv.id}','Sent')">Send</button>` : ""}
+            ${inv.status === "Draft" || inv.status === "Sent" ? `<button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="emailInvoice('${inv.id}')">✉ Send</button>` : ""}
             ${inv.status !== "Void" && inv.status !== "Paid" ? `<button class="btn btn-ghost btn-sm" style="font-size:11px;color:#f59e0b;border-color:#f59e0b44" onclick="updateInvStatus('${inv.id}','Void')">Void</button>` : ""}
             <button class="btn btn-ghost btn-sm" style="font-size:11px" onclick="openInvModal('${inv.id}')">Edit</button>
             <button class="btn btn-danger btn-sm" style="font-size:11px" onclick="deleteInv('${inv.id}')">×</button>
@@ -124,6 +124,63 @@ window.updateInvStatus = async function(id, status) {
 window.deleteInv       = async function(id) { if (!confirm("Delete this invoice?")) return; await db.delete("invoices", id); loadAll(); };
 
 // ── Print / PDF export ─────────────────────────────────────────
+window.emailInvoice = async function(id) {
+  const inv   = STATE.data.invoices.find(i => i.id === id);
+  if (!inv) return;
+
+  const items = await _fetchItems(id);
+  const bizName = STATE.data.user_settings?.business_name ||
+                  STATE.data.business_plan?.business_name || "Freelancer";
+
+  // Build line items text
+  const itemLines = items.length > 0
+    ? items.map(it => `  • ${it.description} — ${it.quantity} × $${Number(it.unit_price).toFixed(2)} = $${Number(it.amount || it.quantity * it.unit_price).toFixed(2)}`).join("\n")
+    : `  • Services rendered — $${Number(inv.amount).toFixed(2)}`;
+
+  const dueStr  = inv.due_date
+    ? new Date(inv.due_date).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+    : "Upon receipt";
+
+  const subject = encodeURIComponent(`Invoice ${inv.invoice_number} from ${bizName}`);
+
+  const body = encodeURIComponent(
+`Hi ${inv.client_name || "there"},
+
+Please find your invoice details below.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+INVOICE #${inv.invoice_number}
+From: ${bizName}
+To: ${inv.client_name || ""}
+Project: ${inv.project_name || ""}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${itemLines}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOTAL DUE: $${Number(inv.amount).toFixed(2)}
+Due Date:  ${dueStr}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${inv.notes ? `Notes: ${inv.notes}\n\n` : ""}Please reply to this email to confirm receipt or with any questions.
+
+Thank you,
+${bizName}`
+  );
+
+  // Get client email if available
+  const client    = (STATE.data.clients || []).find(c => c.id === inv.client_id);
+  const clientEmail = client?.email || "";
+
+  // Open mailto — uses user's default email app
+  window.location.href = `mailto:${clientEmail}?subject=${subject}&body=${body}`;
+
+  // Mark as Sent if still Draft
+  if (inv.status === "Draft") {
+    await updateInvStatus(id, "Sent");
+  }
+};
+
 window.printInvoice = async function(id) {
   const inv   = STATE.data.invoices.find(i => i.id === id);
   if (!inv) return;
