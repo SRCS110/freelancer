@@ -22,9 +22,19 @@ window.autoLogTechStackExpenses = async function() {
     if (!item.amount || item.cycle === "one-time") continue;
 
     if (item.cycle === "monthly") {
-      // Check if an expense for this item already exists this month
+      // Use renewal_date day-of-month as the billing anchor
+      // Only log if today is on or after the billing day this month
+      const key         = `Tech Stack: ${item.name}`;
+      const renewalDay  = item.renewal_date
+        ? new Date(item.renewal_date).getUTCDate()
+        : 1; // default to 1st if no renewal date set
+      const billingDate = new Date(today.getFullYear(), today.getMonth(), renewalDay);
+
+      // Only proceed if today >= billing day this month
+      if (today < billingDate) continue;
+
+      // Check if already logged this month on or after the billing date
       const thisMonth = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}`;
-      const key       = `Tech Stack: ${item.name}`;
       const alreadyLogged = finances.some(f =>
         f.description === key &&
         f.type        === "expense" &&
@@ -36,8 +46,8 @@ window.autoLogTechStackExpenses = async function() {
           description: key,
           amount:      Number(item.amount),
           category:    "Software",
-          date:        today.toISOString().slice(0, 10),
-          notes:       `Auto-logged from Tech Stack (${item.cycle})`,
+          date:        billingDate.toISOString().slice(0, 10),
+          notes:       `Auto-logged from Tech Stack (monthly)`,
         });
       }
     }
