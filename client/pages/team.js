@@ -304,12 +304,12 @@ window.cancelInvite = async function(id) {
 window.handleInviteToken = async function() {
   // Check URL param first, then sessionStorage (set before auth redirect)
   const urlToken   = new URLSearchParams(window.location.search).get("invite");
-  const savedToken = sessionStorage.getItem("fh_pending_invite");
+  const savedToken = localStorage.getItem("fh_pending_invite");
   const token      = urlToken && urlToken !== "pending" ? urlToken : savedToken;
   if (!token) return;
 
   // Clear immediately to prevent re-processing on refresh
-  sessionStorage.removeItem("fh_pending_invite");
+  localStorage.removeItem("fh_pending_invite");
   window.history.replaceState({}, "", window.location.pathname);
 
   try {
