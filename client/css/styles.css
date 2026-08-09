@@ -141,12 +141,11 @@ button { font-family: 'Inter', sans-serif; cursor: pointer; border: none; border
 }
 .rail-spacer { flex: 1; }
 
-/* ── Hover-expand sidebar on desktop ────────────────────────── */
+/* ── Hover-expand sidebar on desktop only ────────────────────── */
 @media (min-width: 641px) {
   .sidebar-panel {
-    transition: width .2s cubic-bezier(.4,0,.2,1), opacity .2s;
+    transition: width .22s cubic-bezier(.4,0,.2,1), opacity .2s;
   }
-  /* Collapsed state — panel hidden, triggered by JS class on #app */
   #app.sidebar-collapsed .sidebar-panel {
     width: 0;
     opacity: 0;
@@ -156,6 +155,8 @@ button { font-family: 'Inter', sans-serif; cursor: pointer; border: none; border
   #app.sidebar-collapsed .sidebar-rail {
     border-right: 1px solid var(--border);
   }
+  /* Keep rail always visible on desktop */
+  .sidebar-rail { display: flex !important; }
 }
 
 /* ── Panel (expanded section) ────────────────────────────────── */
@@ -603,6 +604,9 @@ button { font-family: 'Inter', sans-serif; cursor: pointer; border: none; border
   body { overflow: auto; }
   #app { flex-direction: column; height: auto; min-height: 100vh; overflow: visible; }
   .sidebar { display: none; }
+  /* Hide both sidebar panels on mobile — use hamburger drawer instead */
+  .sidebar-rail  { display: none !important; }
+  .sidebar-panel { display: none !important; }
   .mobile-bar { display: flex; }
   .main { padding: 16px; padding-top: 68px; }
 
