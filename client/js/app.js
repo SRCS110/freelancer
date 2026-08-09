@@ -19,47 +19,30 @@ let STATE = {
 async function loadAll() {
   if (!STATE.user) return;
   try {
-    const [clients, projects, finances, invoices, bpList, settingsList, bookmarks, techStack, wfTemplates, wfSteps, wfRuns, wfRunSteps, projectTodos, brainstormNotes, clientDocs, todoSections, teams, teamMembers, teamInvites] = await Promise.all([
-      db.list("clients"),
-      db.list("projects"),
-      db.list("finances"),
-      db.list("invoices"),
-      db.list("business_plan").catch(() => []),
-      db.list("user_settings").catch(() => []),
-      db.list("bookmarks").catch(() => []),
-      db.list("tech_stack").catch(() => []),
-      db.list("workflow_templates").catch(() => []),
-      db.list("workflow_steps").catch(() => []),
-      db.list("workflow_runs").catch(() => []),
-      db.list("workflow_run_steps").catch(() => []),
-      db.list("project_todos").catch(() => []),
-      db.list("brainstorm").catch(() => []),
-      db.list("client_documents").catch(() => []),
-      db.list("project_todo_sections").catch(() => []),
-      db.list("teams").catch(() => []),
-      db.list("team_members").catch(() => []),
-      db.list("team_invites").catch(() => []),
-    ]);
+    const d = await sbFetch("/rest/v1/rpc/get_app_data", {
+      method: "POST",
+      body: JSON.stringify({}),
+    }) || {};
     STATE.data = {
-      clients:             clients    || [],
-      projects:            projects   || [],
-      finances:            finances   || [],
-      invoices:            invoices   || [],
-      business_plan:       (bpList || [])[0] || null,
-      user_settings:       (settingsList || [])[0] || null,
-      bookmarks:           bookmarks  || [],
-      tech_stack:          techStack   || [],
-      workflow_templates: wfTemplates  || [],
-      workflow_steps:     wfSteps      || [],
-      workflow_runs:      wfRuns       || [],
-      workflow_run_steps: wfRunSteps   || [],
-      project_todos:      projectTodos    || [],
-      brainstorm:         brainstormNotes || [],
-      client_documents:     clientDocs    || [],
-      project_todo_sections: todoSections  || [],
-      teams:                 teams          || [],
-      team_members:          teamMembers    || [],
-      team_invites:          teamInvites    || [],
+      clients:               d.clients               || [],
+      projects:              d.projects              || [],
+      finances:              d.finances              || [],
+      invoices:              d.invoices              || [],
+      business_plan:         d.business_plan         || null,
+      user_settings:         d.user_settings         || null,
+      bookmarks:             d.bookmarks             || [],
+      tech_stack:            d.tech_stack            || [],
+      workflow_templates:    d.workflow_templates    || [],
+      workflow_steps:        d.workflow_steps        || [],
+      workflow_runs:         d.workflow_runs         || [],
+      workflow_run_steps:    d.workflow_run_steps    || [],
+      project_todos:         d.project_todos         || [],
+      project_todo_sections: d.project_todo_sections || [],
+      client_documents:      d.client_documents      || [],
+      brainstorm:            d.brainstorm            || [],
+      teams:                 d.teams                 || [],
+      team_members:          d.team_members          || [],
+      team_invites:          d.team_invites          || [],
     };
   } catch (e) {
     console.error("loadAll error:", e.message);
@@ -88,19 +71,31 @@ function sidebarHTML() {
   const overdueCt   = STATE.data.invoices.filter(i => i.status === "Overdue").length;
 
   const demoBanner = window.DEMO_MODE ? demoBannerHTML() : "";
-  const nav = [
-    { id: "dashboard",     label: "Dashboard",     icon: "◈" },
-    { id: "clients",       label: "Clients",        icon: "◎" },
-    { id: "projects",      label: "Projects",       icon: "◫" },
-    { id: "finances",      label: "Finances",       icon: "◇" },
-    { id: "invoices",      label: "Invoices",       icon: "◻" },
-    { id: "business-plan", label: "Business Plan",  icon: "◈" },
-    { id: "bookmarks",     label: "Bookmarks",      icon: "◆" },
-    { id: "tech-stack",    label: "Tech Stack",     icon: "◉" },
-    { id: "workflows",     label: "Workflows",      icon: "◳" },
-    { id: "brainstorm",    label: "Brainstorm",     icon: "◈" },
-    { id: "team",          label: "Team",           icon: "◎" },
+  const NAV_GROUPS = [
+    { label: "Workspace", items: [
+      { id: "dashboard",     label: "Dashboard",    icon: "◈" },
+      { id: "clients",       label: "Clients",      icon: "◎" },
+      { id: "projects",      label: "Projects",     icon: "◫" },
+    ]},
+    { label: "Money", items: [
+      { id: "finances",      label: "Finances",     icon: "◇" },
+      { id: "invoices",      label: "Invoices",     icon: "◻" },
+    ]},
+    { label: "Business", items: [
+      { id: "business-plan", label: "Business Plan",icon: "◈" },
+      { id: "brainstorm",    label: "Brainstorm",   icon: "◆" },
+    ]},
+    { label: "Tools", items: [
+      { id: "bookmarks",     label: "Bookmarks",    icon: "◉" },
+      { id: "tech-stack",    label: "Tech Stack",   icon: "◳" },
+    ]},
+    { label: "Operations", items: [
+      { id: "workflows",     label: "Workflows",    icon: "◳" },
+      { id: "team",          label: "Team",         icon: "◎" },
+    ]},
   ];
+
+  const collapsed = JSON.parse(localStorage.getItem("fh_nav_collapsed") || "{}");
 
   return `
 <div class="sidebar">
@@ -111,14 +106,25 @@ function sidebarHTML() {
     <div class="sidebar-sub">Business OS</div>
   </div>
   ${demoBanner}
-  ${nav.map(n => `
-  <div class="nav-item${STATE.page === n.id ? " active" : ""}" onclick="navigate('${n.id}')">
-    <span style="font-family:'JetBrains Mono',monospace;width:20px;text-align:center;font-size:13px">${n.icon}</span>
-    ${n.label}
-    ${n.id === "invoices" && overdueCt > 0
-      ? `<span style="margin-left:auto;background:#f43f5e;color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px">${overdueCt}</span>`
-      : ""}
-  </div>`).join("")}
+  ${NAV_GROUPS.map(group => {
+    const hasActive   = group.items.some(i => i.id === STATE.page);
+    const isCollapsed = collapsed[group.label] && !hasActive;
+    return `
+  <div>
+    <div class="nav-group-header" onclick="toggleNavGroup('${group.label}')">
+      <span>${group.label}</span>
+      <span style="font-size:9px;transition:transform .15s;display:inline-block;transform:rotate(${isCollapsed ? "-90deg" : "0deg"});color:var(--text-muted)">▾</span>
+    </div>
+    ${isCollapsed ? "" : group.items.map(n => `
+    <div class="nav-item${STATE.page === n.id ? " active" : ""}" onclick="navigate('${n.id}')">
+      <span style="font-family:'JetBrains Mono',monospace;width:20px;text-align:center;font-size:12px">${n.icon}</span>
+      ${n.label}
+      ${n.id === "invoices" && overdueCt > 0
+        ? `<span style="margin-left:auto;background:var(--danger);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px">${overdueCt}</span>`
+        : ""}
+    </div>`).join("")}
+  </div>`;
+  }).join("")}
 
   <div class="sidebar-footer">
     <div class="theme-toggle" onclick="toggleTheme()">
@@ -159,32 +165,49 @@ function mobileBarHTML() {
 
 function _drawerNav() {
   const demoBanner = window.DEMO_MODE ? demoBannerHTML() : "";
-  const nav = [
-    { id: "dashboard",     label: "Dashboard",    icon: "◈" },
-    { id: "clients",       label: "Clients",       icon: "◎" },
-    { id: "projects",      label: "Projects",      icon: "◫" },
-    { id: "finances",      label: "Finances",      icon: "◇" },
-    { id: "invoices",      label: "Invoices",      icon: "◻" },
-    { id: "business-plan", label: "Business Plan", icon: "◈" },
-    { id: "bookmarks",     label: "Bookmarks",     icon: "◆" },
-    { id: "tech-stack",    label: "Tech Stack",    icon: "◉" },
-    { id: "workflows",     label: "Workflows",     icon: "◳" },
-    { id: "brainstorm",    label: "Brainstorm",    icon: "◈" },
-    { id: "team",          label: "Team",          icon: "◎" },
+  const NAV_GROUPS = [
+    { label: "Workspace", items: [
+      { id: "dashboard",     label: "Dashboard",    icon: "◈" },
+      { id: "clients",       label: "Clients",      icon: "◎" },
+      { id: "projects",      label: "Projects",     icon: "◫" },
+    ]},
+    { label: "Money", items: [
+      { id: "finances",      label: "Finances",     icon: "◇" },
+      { id: "invoices",      label: "Invoices",     icon: "◻" },
+    ]},
+    { label: "Business", items: [
+      { id: "business-plan", label: "Business Plan",icon: "◈" },
+      { id: "brainstorm",    label: "Brainstorm",   icon: "◆" },
+    ]},
+    { label: "Tools", items: [
+      { id: "bookmarks",     label: "Bookmarks",    icon: "◉" },
+      { id: "tech-stack",    label: "Tech Stack",   icon: "◳" },
+    ]},
+    { label: "Operations", items: [
+      { id: "workflows",     label: "Workflows",    icon: "◳" },
+      { id: "team",          label: "Team",         icon: "◎" },
+    ]},
   ];
-  const overdueCt = STATE.data.invoices.filter(i => i.status === "Overdue").length;
-  const s   = STATE.data.user_settings;
-  const usr = STATE.user;
+  const overdueCt   = STATE.data.invoices.filter(i => i.status === "Overdue").length;
+  const s           = STATE.data.user_settings;
+  const usr         = STATE.user;
   const displayName = s?.display_name || usr?.email?.split("@")[0] || "account";
-  const isLight = document.body.classList.contains("light");
+  const isLight     = document.body.classList.contains("light");
 
-  return nav.map(n => `
-  <div class="nav-item${STATE.page === n.id ? " active" : ""}" onclick="drawerNavigate('${n.id}')">
-    <span style="font-family:'JetBrains Mono',monospace;width:20px;text-align:center;font-size:13px">${n.icon}</span>
-    ${n.label}
-    ${n.id === "invoices" && overdueCt > 0
-      ? `<span style="margin-left:auto;background:var(--danger);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px">${overdueCt}</span>`
-      : ""}
+  return demoBanner + NAV_GROUPS.map(group => `
+  <div>
+    <div style="padding:10px 20px 3px;font-family:'JetBrains Mono',monospace;font-size:9px;
+      font-weight:700;color:var(--text-muted);letter-spacing:.8px;text-transform:uppercase">
+      ${group.label}
+    </div>
+    ${group.items.map(n => `
+    <div class="nav-item${STATE.page === n.id ? " active" : ""}" onclick="drawerNavigate('${n.id}')">
+      <span style="font-family:'JetBrains Mono',monospace;width:20px;text-align:center;font-size:12px">${n.icon}</span>
+      ${n.label}
+      ${n.id === "invoices" && overdueCt > 0
+        ? `<span style="margin-left:auto;background:var(--danger);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px">${overdueCt}</span>`
+        : ""}
+    </div>`).join("")}
   </div>`).join("") + `
   <div style="margin-top:auto;padding:16px 20px;border-top:1px solid var(--border)">
     <div class="theme-toggle" onclick="toggleTheme()" style="margin-bottom:10px">
@@ -202,7 +225,6 @@ function _drawerNav() {
     <button class="logout-btn" onclick="doSignOut()">sign out</button>
   </div>`;
 }
-
 window.toggleDrawer = function() {
   const drawer = document.getElementById("mobile-drawer");
   const btn    = document.getElementById("hamburger-btn");
@@ -265,6 +287,14 @@ function render() {
 
   root.innerHTML = sidebarHTML() + mobileBarHTML() + `<div class="main">${content}</div>`;
 }
+
+// ── Nav group collapse ────────────────────────────────────────
+window.toggleNavGroup = function(label) {
+  const collapsed = JSON.parse(localStorage.getItem("fh_nav_collapsed") || "{}");
+  collapsed[label] = !collapsed[label];
+  localStorage.setItem("fh_nav_collapsed", JSON.stringify(collapsed));
+  render();
+};
 
 // ── Theme ─────────────────────────────────────────────────────
 function _isLight() { return document.body.classList.contains("light"); }
