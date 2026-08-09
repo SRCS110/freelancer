@@ -121,7 +121,6 @@ function sidebarHTML() {
     ]},
   ];
 
-  const collapsed = JSON.parse(localStorage.getItem("fh_nav_collapsed") || "{}");
 
   return `
 <div class="sidebar">
@@ -132,25 +131,18 @@ function sidebarHTML() {
     <div class="sidebar-sub">Business OS</div>
   </div>
   ${demoBanner}
-  ${NAV_GROUPS.map(group => {
-    const hasActive   = group.items.some(i => i.id === STATE.page);
-    const isCollapsed = collapsed[group.label] && !hasActive;
-    return `
-  <div>
-    <div class="nav-group-header" onclick="toggleNavGroup('${group.label}')">
-      <span>${group.label}</span>
-      <span style="font-size:9px;transition:transform .15s;display:inline-block;transform:rotate(${isCollapsed ? "-90deg" : "0deg"});color:var(--text-muted)">▾</span>
-    </div>
-    ${isCollapsed ? "" : group.items.map(n => `
+  ${NAV_GROUPS.map(group => `
+  <div class="nav-group">
+    <div class="nav-group-label">${group.label}</div>
+    ${group.items.map(n => `
     <div class="nav-item${STATE.page === n.id ? " active" : ""}" onclick="navigate('${n.id}')">
-      <span style="font-family:'JetBrains Mono',monospace;width:20px;text-align:center;font-size:12px">${n.icon}</span>
-      ${n.label}
+      <span class="nav-icon">${n.icon}</span>
+      <span>${n.label}</span>
       ${n.id === "invoices" && overdueCt > 0
-        ? `<span style="margin-left:auto;background:var(--danger);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px">${overdueCt}</span>`
+        ? `<span class="nav-badge">${overdueCt}</span>`
         : ""}
     </div>`).join("")}
-  </div>`;
-  }).join("")}
+  </div>`).join("")}
 
   <div class="sidebar-footer">
     <div class="theme-toggle" onclick="toggleTheme()">
@@ -221,17 +213,14 @@ function _drawerNav() {
   const isLight     = document.body.classList.contains("light");
 
   return demoBanner + NAV_GROUPS.map(group => `
-  <div>
-    <div style="padding:10px 20px 3px;font-family:'JetBrains Mono',monospace;font-size:9px;
-      font-weight:700;color:var(--text-muted);letter-spacing:.8px;text-transform:uppercase">
-      ${group.label}
-    </div>
+  <div class="nav-group">
+    <div class="nav-group-label">${group.label}</div>
     ${group.items.map(n => `
     <div class="nav-item${STATE.page === n.id ? " active" : ""}" onclick="drawerNavigate('${n.id}')">
-      <span style="font-family:'JetBrains Mono',monospace;width:20px;text-align:center;font-size:12px">${n.icon}</span>
-      ${n.label}
+      <span class="nav-icon">${n.icon}</span>
+      <span>${n.label}</span>
       ${n.id === "invoices" && overdueCt > 0
-        ? `<span style="margin-left:auto;background:var(--danger);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px">${overdueCt}</span>`
+        ? `<span class="nav-badge">${overdueCt}</span>`
         : ""}
     </div>`).join("")}
   </div>`).join("") + `
@@ -316,7 +305,6 @@ function render() {
 
 // ── Nav group collapse ────────────────────────────────────────
 window.toggleNavGroup = function(label) {
-  const collapsed = JSON.parse(localStorage.getItem("fh_nav_collapsed") || "{}");
   collapsed[label] = !collapsed[label];
   localStorage.setItem("fh_nav_collapsed", JSON.stringify(collapsed));
   render();
