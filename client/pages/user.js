@@ -40,11 +40,31 @@ function userSettingsHTML() {
 <div class="page-section-header">
   <div>
     <div class="page-title">Account & Settings</div>
-    <div class="page-sub">Manage your profile, preferences, and project credentials</div>
+    <div class="page-sub">Manage your profile, preferences and business plan</div>
   </div>
 </div>
 
 <div id="user-msg" style="display:none;margin-bottom:20px"></div>
+
+<!-- Business Plan quick link -->
+<div style="display:flex;align-items:center;justify-content:space-between;
+  padding:16px 20px;background:var(--bg-raised);border:1px solid var(--border);
+  border-radius:4px;margin-bottom:20px;cursor:pointer;transition:border-color .15s"
+  onclick="navigate('business-plan')"
+  onmouseover="this.style.borderColor='color-mix(in srgb,var(--accent) 40%,transparent)'"
+  onmouseout="this.style.borderColor='var(--border)'">
+  <div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--text)">
+      Business Plan
+    </div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted);margin-top:3px">
+      ${STATE.data.business_plan?.business_name
+        ? (STATE.data.business_plan.business_name + (STATE.data.business_plan.tagline ? " · " + STATE.data.business_plan.tagline : ""))
+        : "Mission, vision, SWOT, goals — click to define your strategy"}
+    </div>
+  </div>
+  <span style="font-family:'JetBrains Mono',monospace;font-size:16px;color:var(--accent);flex-shrink:0;margin-left:16px">→</span>
+</div>
 
 <!-- ── Profile ─────────────────────────────────────────────── -->
 <div class="card" style="margin-bottom:20px">
