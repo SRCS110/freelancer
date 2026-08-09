@@ -19,42 +19,56 @@ let STATE = {
 async function loadAll() {
   if (!STATE.user) return;
   try {
-    const d = await sbFetch("/rest/v1/rpc/get_app_data", {
-      method: "POST",
-      body: JSON.stringify({}),
-    }) || {};
+    const [
+      clients, projects, finances, invoices,
+      bpList, settingsList, bookmarks, techStack,
+      wfTemplates, wfSteps, wfRuns, wfRunSteps,
+      projectTodos, todoSections, clientDocs,
+      brainstormNotes, teams, teamMembers, teamInvites
+    ] = await Promise.all([
+      db.list("clients"),
+      db.list("projects"),
+      db.list("finances"),
+      db.list("invoices"),
+      db.list("business_plan").catch(() => []),
+      db.list("user_settings").catch(() => []),
+      db.list("bookmarks").catch(() => []),
+      db.list("tech_stack").catch(() => []),
+      db.list("workflow_templates").catch(() => []),
+      db.list("workflow_steps").catch(() => []),
+      db.list("workflow_runs").catch(() => []),
+      db.list("workflow_run_steps").catch(() => []),
+      db.list("project_todos").catch(() => []),
+      db.list("project_todo_sections").catch(() => []),
+      db.list("client_documents").catch(() => []),
+      db.list("brainstorm").catch(() => []),
+      db.list("teams").catch(() => []),
+      db.list("team_members").catch(() => []),
+      db.list("team_invites").catch(() => []),
+    ]);
     STATE.data = {
-      clients:               d.clients               || [],
-      projects:              d.projects              || [],
-      finances:              d.finances              || [],
-      invoices:              d.invoices              || [],
-      business_plan:         d.business_plan         || null,
-      user_settings:         d.user_settings         || null,
-      bookmarks:             d.bookmarks             || [],
-      tech_stack:            d.tech_stack            || [],
-      workflow_templates:    d.workflow_templates    || [],
-      workflow_steps:        d.workflow_steps        || [],
-      workflow_runs:         d.workflow_runs         || [],
-      workflow_run_steps:    d.workflow_run_steps    || [],
-      project_todos:         d.project_todos         || [],
-      project_todo_sections: d.project_todo_sections || [],
-      client_documents:      d.client_documents      || [],
-      brainstorm:            d.brainstorm            || [],
-      teams:                 d.teams                 || [],
-      team_members:          d.team_members          || [],
-      team_invites:          d.team_invites          || [],
+      clients:               clients        || [],
+      projects:              projects       || [],
+      finances:              finances       || [],
+      invoices:              invoices       || [],
+      business_plan:         (bpList || [])[0]       || null,
+      user_settings:         (settingsList || [])[0]  || null,
+      bookmarks:             bookmarks      || [],
+      tech_stack:            techStack      || [],
+      workflow_templates:    wfTemplates    || [],
+      workflow_steps:        wfSteps        || [],
+      workflow_runs:         wfRuns         || [],
+      workflow_run_steps:    wfRunSteps     || [],
+      project_todos:         projectTodos   || [],
+      project_todo_sections: todoSections   || [],
+      client_documents:      clientDocs     || [],
+      brainstorm:            brainstormNotes || [],
+      teams:                 teams          || [],
+      team_members:          teamMembers    || [],
+      team_invites:          teamInvites    || [],
     };
   } catch (e) {
     console.error("loadAll error:", e.message);
-    // RPC not available yet — show empty state rather than crash
-    STATE.data = STATE.data || {
-      clients: [], projects: [], finances: [], invoices: [],
-      business_plan: null, user_settings: null, bookmarks: [],
-      tech_stack: [], workflow_templates: [], workflow_steps: [],
-      workflow_runs: [], workflow_run_steps: [], project_todos: [],
-      project_todo_sections: [], client_documents: [], brainstorm: [],
-      teams: [], team_members: [], team_invites: [],
-    };
   }
   STATE.loading = false;
   render();
