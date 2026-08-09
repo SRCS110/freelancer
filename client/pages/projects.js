@@ -32,8 +32,7 @@ ${filtered.length === 0
     </div>`
   : `<div class="projects-grid">
       ${filtered.map(p => {
-        const sbOk  = !!(creds.supabase_url && creds.supabase_anon_key);
-        const col   = STATUS_COLORS[p.status] || "#64748b";
+        const col   = STATUS_COLORS[p.status] || "var(--text-muted)";
         return `
 <div class="project-card" onclick='openProject(${JSON.stringify(p).replace(/'/g,"&#39;")})'>
   <div style="height:3px;background:${col};border-radius:2px;margin-bottom:14px"></div>
@@ -45,15 +44,10 @@ ${filtered.length === 0
     ${badge(p.status)}
   </div>
   ${p.description ? `<div style="font-size:12px;color:var(--text-muted);line-height:1.5;margin:8px 0;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">${p.description}</div>` : ""}
-  <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:10px">
-    ${p.deadline ? `<span style="font-size:11px;color:var(--text-muted)">📅 ${fmtDate(p.deadline)}</span>` : ""}
-    ${p.budget   ? `<span style="font-size:11px;color:var(--text-muted)">💰 ${usd(p.budget)}</span>`        : ""}
-  </div>
-  <div style="display:flex;gap:14px;padding-top:12px;border-top:1px solid #2a3048">
-    <span style="font-size:11px;color:${sbOk ? "#10b981" : "#64748b"};display:flex;align-items:center">
-      
-    <span style="font-size:11px;color:${goOk ? "#10b981" : "#64748b"};display:flex;align-items:center">
-      <span style="width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:5px;background:${goOk ? "#10b981" : "#2a3048"}"></span>Google OAuth</span>
+
+  <div style="display:flex;gap:12px;padding-top:10px;border-top:1px solid var(--border)">
+    ${p.deadline ? `<span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted)">${fmtDate(p.deadline)}</span>` : ""}
+    ${p.budget   ? `<span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted)">${usd(p.budget)}</span>` : ""}
   </div>
 </div>`;
       }).join("")}
@@ -120,35 +114,53 @@ function projectFileHTML(p) {
   </div>
 </div>
 
-<div class="card" style="margin-top:16px">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-    <div class="section-title" style="display:flex;align-items:center;gap:10px">
-      to-do
-      <span id="todo-count-${p.id}" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted);font-weight:400">
+<div class="card" style="margin-top:16px;padding:0;overflow:hidden">
+  <!-- Header -->
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="section-title">tasks</div>
+      <span id="todo-count-${p.id}" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted)">
         ${_projectTodos(p.id).filter(t=>!t.completed).length} remaining
       </span>
     </div>
-    <button class="btn btn-ghost btn-sm" onclick="openTodoInput('${p.id}')">+ add</button>
+    <div class="btn-row">
+      <button class="btn btn-ghost btn-sm" onclick="openAddSectionModal('${p.id}')" style="font-size:10px">+ section</button>
+      <button class="btn btn-primary btn-sm" onclick="openTodoInput('${p.id}',null)" style="font-size:11px">+ task</button>
+    </div>
   </div>
 
-  <div id="todo-input-${p.id}" style="display:none;margin-bottom:14px;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:4px">
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-      <input id="todo-text-${p.id}" placeholder="new task…"
-        style="flex:1;min-width:160px;font-size:13px"
-        onkeydown="if(event.key==='Enter')saveTodo('${p.id}');if(event.key==='Escape')closeTodoInput('${p.id}')"/>
-      <select id="todo-pri-${p.id}" style="width:90px;font-size:11px;padding:7px 6px">
+  <!-- Column headers -->
+  <div style="display:grid;grid-template-columns:1fr 110px 110px 80px 24px;gap:0;padding:6px 20px;background:var(--bg);border-bottom:1px solid var(--border)">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px">Task</div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px">Assignee</div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px">Due Date</div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px">Priority</div>
+    <div></div>
+  </div>
+
+  <!-- Task list -->
+  <div id="todo-list-${p.id}">
+    ${_todoListHTML(p.id)}
+  </div>
+
+  <!-- Inline add row (hidden) -->
+  <div id="todo-input-${p.id}" style="display:none;padding:10px 20px;background:var(--bg);border-top:1px solid var(--border)">
+    <div style="display:grid;grid-template-columns:1fr 110px 110px 80px auto;gap:8px;align-items:center">
+      <input id="todo-text-${p.id}" placeholder="Task name…" style="font-size:13px"
+        onkeydown="if(event.key==='Enter')saveTodo('${p.id}',null);if(event.key==='Escape')closeTodoInput('${p.id}')"/>
+      <input id="todo-assignee-${p.id}" placeholder="Name" style="font-size:11px"/>
+      <input id="todo-due-${p.id}" type="date" style="font-size:11px"/>
+      <select id="todo-pri-${p.id}" style="font-size:11px;padding:7px 4px">
         <option value="normal">normal</option>
         <option value="high">! high</option>
         <option value="low">low</option>
       </select>
-      <input id="todo-due-${p.id}" type="date" style="width:130px;font-size:11px"/>
-      <button class="btn btn-primary btn-sm" onclick="saveTodo('${p.id}')">add</button>
-      <button class="btn btn-ghost btn-sm" onclick="closeTodoInput('${p.id}')">cancel</button>
+      <div class="btn-row">
+        <button class="btn btn-primary btn-sm" onclick="saveTodo('${p.id}',document.getElementById('todo-section-${p.id}')?.value||null)" style="font-size:10px">add</button>
+        <button class="btn btn-ghost btn-sm" onclick="closeTodoInput('${p.id}')" style="font-size:10px">×</button>
+      </div>
     </div>
-  </div>
-
-  <div id="todo-list-${p.id}">
-    ${_todoListHTML(p.id)}
+    <input type="hidden" id="todo-section-${p.id}"/>
   </div>
 </div>`;
 }
@@ -235,113 +247,263 @@ window.projectsListHTML = projectsListHTML;
 function _projectTodos(pid) {
   return (STATE.data.project_todos || [])
     .filter(t => t.project_id === pid)
-    .sort((a, b) => {
-      if (a.completed !== b.completed) return a.completed ? 1 : -1;
-      const pri = { high: 0, normal: 1, low: 2 };
-      return (pri[a.priority] || 1) - (pri[b.priority] || 1) || a.sort_order - b.sort_order;
-    });
+    .sort((a, b) => a.sort_order - b.sort_order);
+}
+
+function _projectSections(pid) {
+  return (STATE.data.project_todo_sections || [])
+    .filter(s => s.project_id === pid)
+    .sort((a, b) => a.sort_order - b.sort_order);
 }
 
 const PRI_COLOR = { high: "var(--danger)", normal: "var(--text-muted)", low: "var(--border-2)" };
-const PRI_DOT   = { high: "◆", normal: "◇", low: "○" };
+const PRI_DOT   = { high: "●", normal: "◆", low: "○" };
 
-function _todoListHTML(pid) {
-  const todos = _projectTodos(pid);
-  if (todos.length === 0) {
-    return `<div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-muted);padding:8px 0">
-      no tasks yet — hit + add to create one.
-    </div>`;
-  }
+function _todoRow(t, pid) {
+  const isOverdue = t.due_date && new Date(t.due_date) < new Date() && !t.completed;
+  return `
+<div style="display:grid;grid-template-columns:1fr 110px 110px 80px 24px;gap:0;
+  padding:8px 20px;border-bottom:1px solid var(--border);
+  opacity:${t.completed ? ".45" : "1"};
+  background:${t.completed ? "color-mix(in srgb,var(--bg) 60%,transparent)" : "transparent"};
+  transition:background .12s"
+  id="todo-row-${t.id}"
+  onmouseover="this.style.background='color-mix(in srgb,var(--accent) 4%,transparent)'"
+  onmouseout="this.style.background='${t.completed ? "color-mix(in srgb,var(--bg) 60%,transparent)" : "transparent"}'">
 
-  const open   = todos.filter(t => !t.completed);
-  const closed = todos.filter(t => t.completed);
-
-  const renderItem = t => `
-  <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);opacity:${t.completed ? ".45" : "1"}" id="todo-row-${t.id}">
+  <!-- Checkbox + title -->
+  <div style="display:flex;align-items:center;gap:10px;min-width:0">
     <button onclick="toggleTodo('${t.id}',${t.completed})"
-      style="width:18px;height:18px;flex-shrink:0;border-radius:3px;border:1.5px solid ${t.completed ? "var(--accent)" : "var(--border-2)"};
-             background:${t.completed ? "var(--accent)" : "transparent"};cursor:pointer;
-             display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;
-             color:var(--accent-fg);transition:all .15s">
+      style="width:16px;height:16px;flex-shrink:0;border-radius:3px;
+             border:1.5px solid ${t.completed ? "var(--accent)" : "var(--border-2)"};
+             background:${t.completed ? "var(--accent)" : "transparent"};
+             cursor:pointer;display:flex;align-items:center;justify-content:center;
+             font-size:9px;font-weight:900;color:var(--accent-fg);transition:all .12s">
       ${t.completed ? "✓" : ""}
     </button>
-    <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:${PRI_COLOR[t.priority] || "var(--text-muted)"};flex-shrink:0">${PRI_DOT[t.priority] || "◇"}</span>
-    <span style="flex:1;font-size:13px;color:var(--text);${t.completed ? "text-decoration:line-through" : ""};font-family:'JetBrains Mono',monospace">${t.title}</span>
-    ${t.due_date ? `<span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:${new Date(t.due_date) < new Date() && !t.completed ? "var(--danger)" : "var(--text-muted)"}">${fmtDate(t.due_date)}</span>` : ""}
-    <button onclick="editTodo('${t.id}')"
-      style="background:none;border:none;color:var(--text-muted);font-size:11px;cursor:pointer;padding:2px 6px;line-height:1;flex-shrink:0;font-family:'JetBrains Mono',monospace;border:1px solid var(--border);border-radius:3px"
-      title="edit">edit</button>
-    <button onclick="deleteTodo('${t.id}')"
-      style="background:none;border:none;color:var(--border-2);font-size:14px;cursor:pointer;padding:0;line-height:1;flex-shrink:0"
-      onmouseover="this.style.color='var(--danger)'" onmouseout="this.style.color='var(--border-2)'">×</button>
-  </div>`;
-
-  return open.map(renderItem).join("") +
-    (closed.length > 0 ? `
-    <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted);letter-spacing:.6px;text-transform:uppercase;margin:12px 0 6px;opacity:.6">
-      completed (${closed.length})
+    <div style="min-width:0">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:12px;
+        color:var(--text);${t.completed ? "text-decoration:line-through" : ""};
+        white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.title}</div>
+      ${t.notes ? `<div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.notes}</div>` : ""}
     </div>
-    ${closed.map(renderItem).join("")}` : "");
+  </div>
+
+  <!-- Assignee -->
+  <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted);
+    display:flex;align-items:center;padding-right:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+    ${t.assignee ? `<span style="background:var(--accent-l,color-mix(in srgb,var(--accent) 15%,transparent));color:var(--accent);padding:2px 6px;border-radius:3px;font-size:10px">${t.assignee}</span>` : `<span style="color:var(--border-2)">—</span>`}
+  </div>
+
+  <!-- Due date -->
+  <div style="font-family:'JetBrains Mono',monospace;font-size:11px;
+    color:${isOverdue ? "var(--danger)" : "var(--text-muted)"};
+    display:flex;align-items:center">
+    ${t.due_date ? fmtDate(t.due_date) : `<span style="color:var(--border-2)">—</span>`}
+  </div>
+
+  <!-- Priority -->
+  <div style="display:flex;align-items:center">
+    <span style="font-size:10px;color:${PRI_COLOR[t.priority] || "var(--text-muted)"}" title="${t.priority}">
+      ${PRI_DOT[t.priority] || "◆"}
+    </span>
+  </div>
+
+  <!-- Actions -->
+  <div style="display:flex;align-items:center;gap:4px;opacity:0" class="todo-actions"
+    onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0'">
+    <button onclick="editTodo('${t.id}')"
+      style="background:none;border:none;color:var(--text-muted);font-size:11px;cursor:pointer;padding:2px;font-family:'JetBrains Mono',monospace"
+      title="edit">✎</button>
+    <button onclick="deleteTodo('${t.id}')"
+      style="background:none;border:none;color:var(--border-2);font-size:13px;cursor:pointer;padding:2px;line-height:1"
+      onmouseover="this.style.color='var(--danger)'" onmouseout="this.style.color='var(--border-2)'"
+      title="delete">×</button>
+  </div>
+</div>`;
 }
 
-// Refresh just the todo list without full render
+function _todoListHTML(pid) {
+  const todos    = _projectTodos(pid);
+  const sections = _projectSections(pid);
+  const collapsed = window._collapsedSections || {};
+
+  let html = "";
+
+  if (sections.length === 0) {
+    // Flat list — no sections
+    const open   = todos.filter(t => !t.completed && !t.section_id);
+    const closed = todos.filter(t =>  t.completed && !t.section_id);
+
+    if (open.length === 0 && closed.length === 0) {
+      return `<div style="padding:20px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-muted);text-align:center">
+        no tasks yet — hit + task to add one, or + section to organize into phases.
+      </div>`;
+    }
+
+    html += open.map(t => _todoRow(t, pid)).join("");
+    if (closed.length > 0) {
+      html += `<div style="padding:8px 20px;font-family:'JetBrains Mono',monospace;font-size:9px;
+        color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--border);
+        background:var(--bg)">completed (${closed.length})</div>`;
+      html += closed.map(t => _todoRow(t, pid)).join("");
+    }
+    return html;
+  }
+
+  // Sectioned layout
+  sections.forEach(sec => {
+    const secTodos  = todos.filter(t => t.section_id === sec.id && !t.completed);
+    const secDone   = todos.filter(t => t.section_id === sec.id &&  t.completed);
+    const isCollapsed = collapsed[sec.id];
+    const total     = secTodos.length + secDone.length;
+
+    html += `
+    <div style="border-bottom:1px solid var(--border)">
+      <!-- Section header -->
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 20px;
+        background:var(--bg);cursor:pointer;user-select:none"
+        onclick="toggleSection('${sec.id}')">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted);
+          transition:transform .15s;display:inline-block;transform:rotate(${isCollapsed ? "-90deg" : "0deg"})">▾</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--text)">${sec.title}</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted)">${secDone.length}/${total}</span>
+        <div style="flex:1"></div>
+        <button onclick="event.stopPropagation();openTodoInput('${pid}','${sec.id}')"
+          style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted);
+          background:none;border:none;cursor:pointer;padding:2px 6px;border-radius:3px"
+          onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">+ task</button>
+        <button onclick="event.stopPropagation();deleteSection('${sec.id}')"
+          style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--border-2);
+          background:none;border:none;cursor:pointer;padding:2px 4px"
+          onmouseover="this.style.color='var(--danger)'" onmouseout="this.style.color='var(--border-2)'"
+          title="delete section">×</button>
+      </div>
+      ${isCollapsed ? "" : `
+      ${secTodos.length === 0 && secDone.length === 0
+        ? `<div style="padding:10px 20px 10px 48px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted)">no tasks in this section yet.</div>`
+        : secTodos.map(t => _todoRow(t, pid)).join("") +
+          (secDone.length > 0 ? `
+          <div style="padding:6px 20px;font-family:'JetBrains Mono',monospace;font-size:9px;
+            color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px;background:var(--bg)">
+            completed (${secDone.length})</div>` +
+            secDone.map(t => _todoRow(t, pid)).join("") : "")}
+      `}
+    </div>`;
+  });
+
+  // Unsectioned tasks at bottom
+  const unsectioned = todos.filter(t => !t.section_id && !t.completed);
+  const unsectionedDone = todos.filter(t => !t.section_id && t.completed);
+  if (unsectioned.length > 0 || unsectionedDone.length > 0) {
+    html += `<div style="padding:8px 20px;font-family:'JetBrains Mono',monospace;font-size:9px;
+      color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px;background:var(--bg);
+      border-bottom:1px solid var(--border)">no section</div>`;
+    html += unsectioned.map(t => _todoRow(t, pid)).join("");
+    html += unsectionedDone.map(t => _todoRow(t, pid)).join("");
+  }
+
+  return html;
+}
+
 function _refreshTodoList(pid) {
+  if (!pid) return;
   const el = document.getElementById("todo-list-" + pid);
   if (el) el.innerHTML = _todoListHTML(pid);
-  // Update remaining count
   const remaining = _projectTodos(pid).filter(t => !t.completed).length;
-  const countEl = el?.closest(".card")?.querySelector(".section-title span");
+  const countEl = document.getElementById("todo-count-" + pid);
   if (countEl) countEl.textContent = `${remaining} remaining`;
 }
 
-window.openTodoInput = function(pid) {
+// ── Section actions ───────────────────────────────────────────
+window.toggleSection = function(sectionId) {
+  window._collapsedSections = window._collapsedSections || {};
+  window._collapsedSections[sectionId] = !window._collapsedSections[sectionId];
+  const pid = STATE.openProject?.id;
+  _refreshTodoList(pid);
+};
+
+window.openAddSectionModal = function(pid) {
+  showModal(`
+<div class="modal-header">
+  <div class="modal-title">new section</div>
+  <button class="modal-close" onclick="closeModal()">×</button>
+</div>
+<div class="form-group">
+  <label class="form-label">Section Name</label>
+  <input id="sec-title" placeholder="Phase 1: Discovery" autofocus
+    onkeydown="if(event.key==='Enter') saveSection('${pid}')"/>
+</div>
+<div class="modal-actions">
+  <button class="btn btn-ghost" onclick="closeModal()">cancel</button>
+  <button class="btn btn-primary" onclick="saveSection('${pid}')">add section</button>
+</div>`);
+  setTimeout(() => document.getElementById("sec-title")?.focus(), 100);
+};
+
+window.saveSection = async function(pid) {
+  const title = document.getElementById("sec-title")?.value.trim();
+  if (!title) return;
+  const existing = _projectSections(pid);
+  try {
+    await db.insert("project_todo_sections", {
+      project_id: pid, title, sort_order: existing.length,
+    });
+    closeModal(); await loadAll();
+  } catch(e) { alert(e.message); }
+};
+
+window.deleteSection = async function(id) {
+  if (!confirm("Delete this section? Tasks inside will move to unsectioned.")) return;
+  await db.delete("project_todo_sections", id); loadAll();
+};
+
+// ── Task input ────────────────────────────────────────────────
+window.openTodoInput = function(pid, sectionId) {
   const wrap = document.getElementById("todo-input-" + pid);
+  const secInput = document.getElementById("todo-section-" + pid);
   if (!wrap) return;
   wrap.style.display = "block";
+  if (secInput) secInput.value = sectionId || "";
   setTimeout(() => document.getElementById("todo-text-" + pid)?.focus(), 50);
 };
 
 window.closeTodoInput = function(pid) {
   const wrap = document.getElementById("todo-input-" + pid);
   if (wrap) wrap.style.display = "none";
-  const inp = document.getElementById("todo-text-" + pid);
-  if (inp) inp.value = "";
+  ["todo-text-","todo-assignee-","todo-due-"].forEach(p => {
+    const el = document.getElementById(p + pid);
+    if (el) el.value = "";
+  });
 };
 
-window.saveTodo = async function(pid) {
-  const inp  = document.getElementById("todo-text-" + pid);
-  const pri  = document.getElementById("todo-pri-" + pid);
-  const due  = document.getElementById("todo-due-" + pid);
-  const title = inp?.value.trim();
+window.saveTodo = async function(pid, sectionId) {
+  const title    = document.getElementById("todo-text-" + pid)?.value.trim();
+  const assignee = document.getElementById("todo-assignee-" + pid)?.value.trim();
+  const due      = document.getElementById("todo-due-" + pid)?.value;
+  const priority = document.getElementById("todo-pri-" + pid)?.value || "normal";
+  const secId    = sectionId || document.getElementById("todo-section-" + pid)?.value || null;
   if (!title) return;
-
   const todos = _projectTodos(pid);
   try {
     await db.insert("project_todos", {
-      project_id: pid,
-      title,
-      priority:   pri?.value || "normal",
-      due_date:   due?.value || null,
-      sort_order: todos.length,
-      completed:  false,
+      project_id: pid, title, assignee: assignee || null,
+      priority, due_date: due || null,
+      section_id: secId || null,
+      sort_order: todos.length, completed: false,
     });
-    await loadAll();
-    closeTodoInput(pid);
+    await loadAll(); closeTodoInput(pid);
   } catch(e) { alert(e.message); }
 };
 
 window.toggleTodo = async function(id, currentlyDone) {
   try {
     await db.update("project_todos", id, {
-      completed:    !currentlyDone,
+      completed: !currentlyDone,
       completed_at: !currentlyDone ? new Date().toISOString() : null,
     });
-    // Optimistic update in state
     const todo = (STATE.data.project_todos || []).find(t => t.id === id);
-    if (todo) {
-      todo.completed    = !currentlyDone;
-      todo.completed_at = !currentlyDone ? new Date().toISOString() : null;
-    }
+    if (todo) { todo.completed = !currentlyDone; }
     _refreshTodoList(STATE.openProject?.id);
   } catch(e) { console.error(e); }
 };
@@ -356,9 +518,13 @@ window.editTodo = function(id) {
 </div>
 <div class="form-group">
   <label class="form-label">Task</label>
-  <input id="todo-edit-title" value="${t.title.replace(/"/g,'&quot;')}" placeholder="task title…"/>
+  <input id="todo-edit-title" value="${t.title.replace(/"/g,"&quot;")}"/>
 </div>
 <div class="form-row">
+  <div class="form-group">
+    <label class="form-label">Assignee</label>
+    <input id="todo-edit-assignee" value="${t.assignee || ""}" placeholder="Name"/>
+  </div>
   <div class="form-group">
     <label class="form-label">Priority</label>
     <select id="todo-edit-pri">
@@ -367,10 +533,16 @@ window.editTodo = function(id) {
       <option value="high"${t.priority==="high"?" selected":""}>! high</option>
     </select>
   </div>
+</div>
+<div class="form-row">
   <div class="form-group">
     <label class="form-label">Due Date</label>
     <input id="todo-edit-due" type="date" value="${t.due_date || ""}"/>
   </div>
+</div>
+<div class="form-group">
+  <label class="form-label">Notes</label>
+  <input id="todo-edit-notes" value="${t.notes || ""}" placeholder="Additional context…"/>
 </div>
 <div class="modal-actions">
   <button class="btn btn-ghost" onclick="closeModal()">cancel</button>
@@ -379,14 +551,17 @@ window.editTodo = function(id) {
 };
 
 window.updateTodo = async function(id) {
-  const title    = document.getElementById("todo-edit-title")?.value.trim();
-  const priority = document.getElementById("todo-edit-pri")?.value;
-  const due_date = document.getElementById("todo-edit-due")?.value || null;
-  if (!title) return;
+  const body = {
+    title:    document.getElementById("todo-edit-title")?.value.trim(),
+    assignee: document.getElementById("todo-edit-assignee")?.value.trim() || null,
+    priority: document.getElementById("todo-edit-pri")?.value,
+    due_date: document.getElementById("todo-edit-due")?.value || null,
+    notes:    document.getElementById("todo-edit-notes")?.value.trim() || null,
+  };
+  if (!body.title) return;
   try {
-    await db.update("project_todos", id, { title, priority, due_date });
-    closeModal();
-    await loadAll();
+    await db.update("project_todos", id, body);
+    closeModal(); await loadAll();
   } catch(e) { alert(e.message); }
 };
 
@@ -399,5 +574,6 @@ window.deleteTodo = async function(id) {
     _refreshTodoList(STATE.openProject?.id);
   } catch(e) { console.error(e); }
 };
+
 
 window.projectFileHTML  = projectFileHTML;
