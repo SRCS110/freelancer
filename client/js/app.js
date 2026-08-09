@@ -73,8 +73,26 @@ async function loadAll() {
   } catch (e) {
     console.error("loadAll error:", e.message);
   }
+  // Auto-mark overdue invoices
+  await _checkOverdueInvoices();
+
   STATE.loading = false;
   render();
+}
+
+async function _checkOverdueInvoices() {
+  const today = new Date().toISOString().slice(0, 10);
+  const overdue = (STATE.data.invoices || []).filter(i =>
+    i.due_date &&
+    i.due_date < today &&
+    i.status === "Sent"
+  );
+  for (const inv of overdue) {
+    try {
+      await db.update("invoices", inv.id, { status: "Overdue" });
+      inv.status = "Overdue"; // update in-memory state too
+    } catch(e) { console.warn("Could not mark overdue:", e.message); }
+  }
 }
 
 // ── Navigation ────────────────────────────────────────────────
