@@ -1,5 +1,5 @@
 /* ==========================================================================
-   FreelanceHub — Design System
+   Freelancer — Design System
    Modeled after Sync Race anti-corporate aesthetic.
    Supports dark (default) and light theme via .light class on <body>.
    ========================================================================== */
@@ -313,25 +313,6 @@ button { font-family: 'Inter', sans-serif; cursor: pointer; border: none; border
 .breadcrumb      { display: flex; align-items: center; gap: 8px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-muted); margin-bottom: 24px; }
 .breadcrumb-link { color: var(--accent); cursor: pointer; font-weight: 600; }
 .breadcrumb-link:hover { text-decoration: underline; }
-
-/* ── Connection Panel ──────────────────────────────────────── */
-.conn-panel         { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; margin-bottom: 28px; overflow: hidden; }
-.conn-panel-header  { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; }
-.conn-panel-title   { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700; color: var(--text); }
-.conn-badges        { display: flex; gap: 8px; align-items: center; }
-.conn-badge         { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: 3px; font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; text-transform: uppercase; }
-.conn-badge.ok      { background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); }
-.conn-badge.miss    { background: color-mix(in srgb, var(--danger) 10%, transparent); color: var(--danger); border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent); }
-.conn-input-wrap    { position: relative; }
-.conn-input         { width: 100%; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 3px; padding: 8px 36px 8px 10px; font-size: 12px; outline: none; font-family: 'JetBrains Mono', monospace; }
-.conn-input:focus   { border-color: var(--accent); }
-.conn-input.filled  { border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
-.conn-eye           { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 13px; padding: 0; line-height: 1; }
-.conn-save-btn      { background: var(--accent); color: var(--accent-fg); padding: 7px 16px; font-size: 11px; font-weight: 700; border-radius: 3px; border: none; cursor: pointer; font-family: 'JetBrains Mono', monospace; }
-.conn-save-btn:hover  { opacity: .88; }
-.conn-clear-btn     { background: transparent; color: var(--text-muted); border: 1px solid var(--border); padding: 7px 12px; font-size: 11px; font-weight: 600; border-radius: 3px; cursor: pointer; font-family: 'JetBrains Mono', monospace; }
-.conn-clear-btn:hover { color: var(--danger); }
-.conn-saved         { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); }
 
 /* ── Project file ──────────────────────────────────────────── */
 .pf-meta        { display: flex; gap: 10px; align-items: center; margin-top: 8px; flex-wrap: wrap; margin-bottom: 24px; }
