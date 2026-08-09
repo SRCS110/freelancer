@@ -167,7 +167,9 @@ function sidebarHTML() {
   const demoBanner  = window.DEMO_MODE ? demoBannerHTML() : "";
 
   return `
-<div class="sidebar-rail">
+<div class="sidebar-rail" id="sidebar-rail"
+  onmouseenter="expandSidebar()"
+  onmouseleave="collapseSidebar()">
   <div class="rail-logo" onclick="navigate('dashboard')" title="Home">
     ${(STATE.data.user_settings?.business_name || STATE.data.business_plan?.business_name || "F").charAt(0).toUpperCase()}
   </div>
@@ -195,7 +197,9 @@ function sidebarHTML() {
   </div>
 </div>
 
-<div class="sidebar-panel">
+<div class="sidebar-panel" id="sidebar-panel"
+  onmouseenter="expandSidebar()"
+  onmouseleave="collapseSidebar()">
   ${demoBanner}
 
   <!-- Company header -->
@@ -220,8 +224,10 @@ function sidebarHTML() {
   ${recents.length > 0 ? `
   <div class="panel-recents-header">
     <span>Recent</span>
-    <span onclick="navigate('${SECTION_ITEMS[activeSection]?.[0]?.id || activeSection}')"
-      style="cursor:pointer;color:var(--accent);font-size:10px">+ add</span>
+    <span onclick="_sectionAdd('${activeSection}')"
+      style="cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:10px;
+      font-weight:700;background:var(--accent);color:var(--accent-fg);
+      padding:2px 8px;border-radius:3px">+ add</span>
   </div>
   ${recents.map(r => `
   <div class="panel-recent-item" onclick="${r.action}">
@@ -235,8 +241,10 @@ function sidebarHTML() {
 
   <!-- Footer: theme toggle + sign out -->
   <div class="panel-footer">
-    <div class="theme-toggle" onclick="toggleTheme()">
-      <span>${_isLight() ? "light mode" : "dark mode"}</span>
+    <div class="theme-toggle" onclick="toggleTheme()" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding:4px 0">
+      <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted);letter-spacing:.4px;text-transform:uppercase">
+        ${_isLight() ? "light mode" : "dark mode"}
+      </span>
       <div class="theme-toggle-track${_isLight() ? " on" : ""}">
         <div class="theme-toggle-thumb"></div>
       </div>
@@ -398,6 +406,108 @@ window.toggleNavGroup = function(label) {
   localStorage.setItem("fh_nav_collapsed", JSON.stringify(collapsed));
   render();
 };
+
+
+// ── Section quick-add ─────────────────────────────────────────
+window._sectionAdd = function(section) {
+  switch(section) {
+    case "workspace":
+      // Ask what to add
+      showModal(`
+<div class="modal-header">
+  <div class="modal-title">add new</div>
+  <button class="modal-close" onclick="closeModal()">×</button>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px;margin-top:4px">
+  <button class="btn btn-ghost" style="justify-content:flex-start;gap:12px;padding:12px 16px"
+    onclick="closeModal();openClientModal(null)">
+    <span style="font-family:'JetBrains Mono',monospace;font-size:14px">◎</span>
+    <span>New Client</span>
+  </button>
+  <button class="btn btn-ghost" style="justify-content:flex-start;gap:12px;padding:12px 16px"
+    onclick="closeModal();navigate('projects');setTimeout(()=>openProjModal(null),100)">
+    <span style="font-family:'JetBrains Mono',monospace;font-size:14px">◫</span>
+    <span>New Project</span>
+  </button>
+</div>`);
+      break;
+    case "money":
+      showModal(`
+<div class="modal-header">
+  <div class="modal-title">add new</div>
+  <button class="modal-close" onclick="closeModal()">×</button>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px;margin-top:4px">
+  <button class="btn btn-ghost" style="justify-content:flex-start;gap:12px;padding:12px 16px"
+    onclick="closeModal();navigate('finances');setTimeout(()=>openFinModal(null),100)">
+    <span style="font-family:'JetBrains Mono',monospace;font-size:14px">◇</span>
+    <span>Log Income / Expense</span>
+  </button>
+  <button class="btn btn-ghost" style="justify-content:flex-start;gap:12px;padding:12px 16px"
+    onclick="closeModal();navigate('invoices');setTimeout(()=>openInvModal(null),100)">
+    <span style="font-family:'JetBrains Mono',monospace;font-size:14px">◻</span>
+    <span>New Invoice</span>
+  </button>
+</div>`);
+      break;
+    case "tools":
+      showModal(`
+<div class="modal-header">
+  <div class="modal-title">add new</div>
+  <button class="modal-close" onclick="closeModal()">×</button>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px;margin-top:4px">
+  <button class="btn btn-ghost" style="justify-content:flex-start;gap:12px;padding:12px 16px"
+    onclick="closeModal();navigate('bookmarks');setTimeout(()=>openBmModal(null),100)">
+    <span style="font-family:'JetBrains Mono',monospace;font-size:14px">◉</span>
+    <span>New Bookmark</span>
+  </button>
+  <button class="btn btn-ghost" style="justify-content:flex-start;gap:12px;padding:12px 16px"
+    onclick="closeModal();navigate('tech-stack');setTimeout(()=>openStackModal(null),100)">
+    <span style="font-family:'JetBrains Mono',monospace;font-size:14px">◳</span>
+    <span>Add Tech Stack Item</span>
+  </button>
+</div>`);
+      break;
+    case "ops":
+      navigate("workflows");
+      break;
+    default:
+      navigate(SECTION_ITEMS[section]?.[0]?.id || "dashboard");
+  }
+};
+
+
+// ── Sidebar hover expand/collapse ────────────────────────────
+let _sidebarHoverTimer = null;
+
+window.expandSidebar = function() {
+  clearTimeout(_sidebarHoverTimer);
+  document.getElementById("app")?.classList.remove("sidebar-collapsed");
+};
+
+window.collapseSidebar = function() {
+  // Small delay so moving between rail and panel doesn't flicker
+  _sidebarHoverTimer = setTimeout(() => {
+    // Only collapse if not on mobile
+    if (window.innerWidth > 640) {
+      document.getElementById("app")?.classList.add("sidebar-collapsed");
+    }
+  }, 300);
+};
+
+// Start collapsed on desktop (expand on hover)
+(function initSidebarState() {
+  if (window.innerWidth > 640) {
+    document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("app")?.classList.add("sidebar-collapsed");
+    });
+    // Also set immediately in case DOM is already ready
+    if (document.readyState !== "loading") {
+      document.getElementById("app")?.classList.add("sidebar-collapsed");
+    }
+  }
+})();
 
 // ── Theme ─────────────────────────────────────────────────────
 function _isLight() { return document.body.classList.contains("light"); }
