@@ -10,7 +10,10 @@ let STATE = {
   data: {
     clients: [], projects: [], finances: [], invoices: [],
     business_plan: null, user_settings: null,
-    bookmarks: [], tech_stack: [], workflow_templates: [], workflow_steps: [], workflow_runs: [], workflow_run_steps: [],
+    bookmarks: [], tech_stack: [],
+    workflow_templates: [], workflow_steps: [], workflow_runs: [], workflow_run_steps: [],
+    project_todos: [], project_todo_sections: [], client_documents: [],
+    brainstorm: [], teams: [], team_members: [], team_invites: [],
   },
   loading: true,
 };
@@ -281,7 +284,7 @@ function render() {
   const root = document.getElementById("app");
 
   if (STATE.loading) {
-    root.innerHTML = `<div class="spinner" style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#0f1117">Loading…</div>`;
+    root.innerHTML = `<div class="spinner" style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bg,#0a0a0c)">Loading…</div>`;
     return;
   }
 
@@ -355,11 +358,26 @@ waitForAuth(async function() {
     return; // skip auth entirely
   }
 
+  // ── Preserve invite token across auth redirect ────────────────
+  const inviteToken = urlParams.get("invite");
+  if (inviteToken) {
+    sessionStorage.setItem("fh_pending_invite", inviteToken);
+    // Clean URL so the token doesn't interfere with auth
+    window.history.replaceState({}, "", window.location.pathname);
+  }
+
   // ── Normal auth flow ─────────────────────────────────────────
   if (!hasConfig()) { window.location.href = "login.html"; return; }
 
   const session = await Auth.requireAuth();
-  if (!session) return;
+  if (!session) {
+    // Not logged in — redirect to login, carrying invite token hint
+    const dest = inviteToken || sessionStorage.getItem("fh_pending_invite")
+      ? "login.html?invite=pending"
+      : "login.html";
+    window.location.href = dest;
+    return;
+  }
 
   STATE.user     = session.user;
   window.STATE   = STATE;
