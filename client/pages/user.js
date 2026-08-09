@@ -119,26 +119,6 @@ function userSettingsHTML() {
   </div>
 </div>
 
-<!-- ── Project Credentials ─────────────────────────────────── -->
-<div class="card" style="margin-bottom:20px">
-  <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;padding-bottom:14px;border-bottom:1px solid var(--border)">
-    <span style="font-size:20px">◉</span>
-    <div>
-      <div class="section-title" style="color:var(--warning)">Project Credentials</div>
-      <div style="font-size:12px;color:var(--text-muted);margin-top:2px">
-        Per-project Supabase and OAuth credentials — stored in your database, available on every device.
-      </div>
-    </div>
-  </div>
-
-  ${STATE.data.projects.length === 0
-    ? `<div style="color:var(--text-muted);font-size:13px;padding:12px 0">
-        No projects yet. <span style="color:#6366f1;cursor:pointer" onclick="navigate('projects')">Create one first →</span>
-      </div>`
-    : STATE.data.projects.map(p => _projectCredBlock(p)).join("")
-  }
-</div>
-
 <!-- ── Security ───────────────────────────────────────────── -->
 <div class="card" style="margin-bottom:20px">
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid var(--border)">
@@ -182,76 +162,6 @@ function userSettingsHTML() {
 </div>`;
 }
 
-// ── Per-project credential block ──────────────────────────────
-function _projectCredBlock(p) {
-  const creds = STATE.data.project_credentials?.find(c => c.project_id === p.id) || {};
-  const sbOk  = !!(creds.supabase_url && creds.supabase_anon_key);
-  const goOk  = !!(creds.google_client_id && creds.google_client_secret);
-
-  return `
-<div style="margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--border)">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-    <div>
-      <div style="font-weight:600;color:var(--text);font-size:14px">${p.name}</div>
-      <div style="font-size:11px;color:var(--text-muted)">${p.client_name || "No client"}</div>
-    </div>
-    <div style="display:flex;gap:8px">
-      <span class="conn-badge ${sbOk ? "ok" : "miss"}">${sbOk ? "✓" : "○"} Server Credentials</span>
-      <span class="conn-badge ${goOk ? "ok" : "miss"}">${goOk ? "✓" : "○"} Google OAuth</span>
-    </div>
-  </div>
-
-  <div class="form-row" style="margin-bottom:10px">
-    <div class="form-group" style="margin-bottom:0">
-      <label class="form-label" style="color:var(--accent)">Server URL</label>
-      <div class="conn-input-wrap">
-        <input class="conn-input${creds.supabase_url ? " filled" : ""}"
-          id="pc-${p.id}-supabase_url" value="${creds.supabase_url || ""}"
-          placeholder="https://xxxx.supabase.co" spellcheck="false" autocomplete="off"/>
-      </div>
-    </div>
-    <div class="form-group" style="margin-bottom:0">
-      <label class="form-label" style="color:var(--accent)">Server Anon Key</label>
-      <div class="conn-input-wrap">
-        <input class="conn-input${creds.supabase_anon_key ? " filled" : ""}" type="password"
-          id="pc-${p.id}-supabase_anon_key" value="${creds.supabase_anon_key || ""}"
-          placeholder="eyJhbGci…" spellcheck="false" autocomplete="off"/>
-        <button class="conn-eye" onclick="toggleProjEye('${p.id}','supabase_anon_key')">👁</button>
-      </div>
-    </div>
-  </div>
-
-  <div class="form-row" style="margin-bottom:10px">
-    <div class="form-group" style="margin-bottom:0">
-      <label class="form-label" style="color:#4285F4">Google Client ID</label>
-      <input class="conn-input${creds.google_client_id ? " filled" : ""}" style="width:100%"
-        id="pc-${p.id}-google_client_id" value="${creds.google_client_id || ""}"
-        placeholder="000000-xxx.apps.googleusercontent.com" spellcheck="false" autocomplete="off"/>
-    </div>
-    <div class="form-group" style="margin-bottom:0">
-      <label class="form-label" style="color:#4285F4">Google Client Secret</label>
-      <div class="conn-input-wrap">
-        <input class="conn-input${creds.google_client_secret ? " filled" : ""}" type="password" style="width:100%"
-          id="pc-${p.id}-google_client_secret" value="${creds.google_client_secret || ""}"
-          placeholder="GOCSPX-…" spellcheck="false" autocomplete="off"/>
-        <button class="conn-eye" onclick="toggleProjEye('${p.id}','google_client_secret')">👁</button>
-      </div>
-    </div>
-  </div>
-  <div class="form-group" style="margin-bottom:10px">
-    <label class="form-label" style="color:#4285F4">Google Redirect URI</label>
-    <input class="conn-input${creds.google_redirect_uri ? " filled" : ""}" style="width:100%"
-      id="pc-${p.id}-google_redirect_uri" value="${creds.google_redirect_uri || ""}"
-      placeholder="https://xxxx.supabase.co/auth/v1/callback" spellcheck="false" autocomplete="off"/>
-  </div>
-
-  <div style="display:flex;gap:8px;align-items:center">
-    <button class="conn-save-btn" onclick="saveProjCreds('${p.id}')">Save</button>
-    <button class="conn-clear-btn" onclick="clearProjCreds('${p.id}')">Clear</button>
-    <span id="pc-saved-${p.id}" style="display:none;font-size:12px;color:var(--accent)">saved</span>
-  </div>
-</div>`;
-}
 
 // ── Save user settings ────────────────────────────────────────
 window.saveUserSettings = async function() {
@@ -290,50 +200,9 @@ window.saveUserSettings = async function() {
 };
 
 // ── Project credentials ───────────────────────────────────────
-window.toggleProjEye = function(pid, field) {
-  requirePin(() => {
-    const el = document.getElementById(`pc-${pid}-${field}`);
-    if (!el) return;
-    el.type = el.type === "password" ? "text" : "password";
-    // Auto-hide after 30 seconds
-    if (el.type === "text") setTimeout(() => { el.type = "password"; }, 30000);
-  });
-};
 
-window.saveProjCreds = async function(pid) {
-  const fields = ["supabase_url","supabase_anon_key","google_client_id","google_client_secret","google_redirect_uri"];
-  const body   = { project_id: pid, updated_at: new Date().toISOString() };
-  fields.forEach(k => {
-    const el = document.getElementById(`pc-${pid}-${k}`);
-    if (el) body[k] = el.value.trim() || null;
-  });
 
-  try {
-    const existing = STATE.data.project_credentials?.find(c => c.project_id === pid);
-    if (existing?.id) {
-      await db.update("project_credentials", existing.id, body);
-    } else {
-      await db.insert("project_credentials", body);
-    }
-    const msg = document.getElementById(`pc-saved-${pid}`);
-    if (msg) { msg.style.display = "inline"; setTimeout(() => msg.style.display = "none", 2500); }
-    await loadAll();
-  } catch(e) {
-    alert("Error saving credentials: " + e.message);
-  }
-};
 
-window.clearProjCreds = async function(pid) {
-  if (!confirm("Clear all credentials for this project?")) return;
-  const existing = STATE.data.project_credentials?.find(c => c.project_id === pid);
-  if (existing?.id) {
-    await db.delete("project_credentials", existing.id);
-    await loadAll();
-    render();
-  }
-};
-
-// ── Password reset ────────────────────────────────────────────
 window._showChangePinFlow = function() {
   // After PIN verified, show create-PIN modal to set a new one
   // Clear existing hash first so _showCreatePinModal triggers

@@ -32,9 +32,7 @@ ${filtered.length === 0
     </div>`
   : `<div class="projects-grid">
       ${filtered.map(p => {
-        const creds = (STATE.data.project_credentials || []).find(c => c.project_id === p.id) || {};
         const sbOk  = !!(creds.supabase_url && creds.supabase_anon_key);
-        const goOk  = !!(creds.google_client_id && creds.google_client_secret);
         const col   = STATUS_COLORS[p.status] || "#64748b";
         return `
 <div class="project-card" onclick='openProject(${JSON.stringify(p).replace(/'/g,"&#39;")})'>
@@ -53,7 +51,7 @@ ${filtered.length === 0
   </div>
   <div style="display:flex;gap:14px;padding-top:12px;border-top:1px solid #2a3048">
     <span style="font-size:11px;color:${sbOk ? "#10b981" : "#64748b"};display:flex;align-items:center">
-      <span style="width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:5px;background:${sbOk ? "#10b981" : "#2a3048"}"></span>Server Credentials</span>
+      
     <span style="font-size:11px;color:${goOk ? "#10b981" : "#64748b"};display:flex;align-items:center">
       <span style="width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:5px;background:${goOk ? "#10b981" : "#2a3048"}"></span>Google OAuth</span>
   </div>
@@ -93,7 +91,6 @@ function projectFileHTML(p) {
   </div>
 </div>
 
-${connPanelHTML(p.id)}
 
 <div class="pf-body">
   <div class="pf-block">
@@ -156,38 +153,7 @@ ${connPanelHTML(p.id)}
 </div>`;
 }
 
-// ── Connection Panel ────────────────────────────────────────
-function connPanelHTML(pid) {
-  const c    = (STATE.data.project_credentials || []).find(c => c.project_id === pid) || {};
-  const sbOk = !!(c.supabase_url && c.supabase_anon_key);
-  const goOk = !!(c.google_client_id && c.google_client_secret && c.google_redirect_uri);
 
-  return `
-<div class="conn-panel" style="margin-bottom:28px">
-  <div class="conn-panel-header" style="cursor:default">
-    <div class="conn-panel-title">🔌 Connection Credentials</div>
-    <div class="conn-badges">
-      <span class="conn-badge ${sbOk ? "ok" : "miss"}">${sbOk ? "✓" : "○"} Server Credentials</span>
-      <span class="conn-badge ${goOk ? "ok" : "miss"}">${goOk ? "✓" : "○"} Google OAuth</span>
-      <button class="btn btn-ghost btn-sm" style="margin-left:12px;font-size:11px"
-        onclick="navigate('settings')">Edit in Settings →</button>
-    </div>
-  </div>
-  ${!sbOk && !goOk ? `
-  <div style="padding:12px 20px;border-top:1px solid #2a3048;font-size:12px;color:var(--text-muted)">
-    No credentials saved for this project yet.
-    <span style="color:#6366f1;cursor:pointer;font-weight:600" onclick="navigate('settings')">
-      Add them in Account & Settings →
-    </span>
-  </div>` : ""}
-</div>`;
-}
-
-// Credentials are now managed in Account & Settings (user.js)
-
-
-
-// ── Project Modal ─────────────────────────────────────────────
 window.openProjectModal = function(id) {
   const p = id ? STATE.data.projects.find(x => x.id === id) : null;
   const { clients } = STATE.data;
