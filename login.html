@@ -271,7 +271,18 @@ waitForAuth(function() {
       } else {
         const { user } = await Auth.signUpWithEmail(email, password, { full_name: name });
         if (user && !user.identities?.length) {
-          showMsg('An account with this email already exists. Try signing in.', 'error');
+          // Account exists — if they came via invite, switch to sign in automatically
+          const isInviteFlow = new URLSearchParams(location.search).get('invite') === 'pending'
+            || sessionStorage.getItem('fh_pending_invite');
+          if (isInviteFlow) {
+            showMsg('Account already exists — signing you in to complete team join…', 'info');
+            setTimeout(() => {
+              document.querySelector('[data-mode="signin"]').click();
+              document.getElementById('emailInput').value = email;
+            }, 1000);
+          } else {
+            showMsg('An account with this email already exists. Sign in instead.', 'error');
+          }
         } else {
           showMsg('Account created! Check your email to confirm, then sign in.', 'success');
           document.querySelector('[data-mode="signin"]').click();
@@ -372,7 +383,7 @@ waitForAuth(function() {
   function friendlyError(msg = '') {
     if (/invalid.*(login|credentials)/i.test(msg)) return 'Incorrect email or password.';
     if (/email.*not.*confirmed/i.test(msg))         return 'Please confirm your email before signing in.';
-    if (/already.*registered/i.test(msg))           return 'An account with this email already exists.';
+    if (/already.*registered/i.test(msg))           return 'An account with this email already exists — sign in instead to join the team.';
     if (/password.*short/i.test(msg))               return 'Password must be at least 8 characters.';
     if (/rate.?limit/i.test(msg))                   return 'Too many attempts — please wait a moment.';
     if (/network/i.test(msg))                       return 'Network error — check your connection.';
