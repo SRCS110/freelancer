@@ -520,17 +520,22 @@ window.collapseSidebar = function() {
   }, 300);
 };
 
-// Start collapsed on desktop (expand on hover)
+// Start collapsed on desktop (expand on hover), never on mobile
 (function initSidebarState() {
-  if (window.innerWidth > 640) {
-    document.addEventListener("DOMContentLoaded", () => {
+  function applyCollapse() {
+    if (window.innerWidth > 640) {
       document.getElementById("app")?.classList.add("sidebar-collapsed");
-    });
-    // Also set immediately in case DOM is already ready
-    if (document.readyState !== "loading") {
-      document.getElementById("app")?.classList.add("sidebar-collapsed");
+    } else {
+      document.getElementById("app")?.classList.remove("sidebar-collapsed");
     }
   }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", applyCollapse);
+  } else {
+    applyCollapse();
+  }
+  // Re-apply on resize (e.g. rotating device)
+  window.addEventListener("resize", applyCollapse);
 })();
 
 // ── Theme ─────────────────────────────────────────────────────
@@ -601,5 +606,6 @@ waitForAuth(async function() {
 
   await loadAll();
   await handleInviteToken();
+  await autoLogTechStackExpenses();
   await runOnboarding();
 });
