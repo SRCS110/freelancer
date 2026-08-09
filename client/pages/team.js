@@ -168,7 +168,7 @@ window.createTeam = async function() {
   const name = document.getElementById("team-name-input")?.value.trim();
   if (!name) return;
   try {
-    const team = await db.insert("teams", { name, owner_id: STATE.user.id });
+    const team = await db.insert("teams", { name, owner_id: STATE.user.id, user_id: STATE.user.id });
     const teamId = Array.isArray(team) ? team[0]?.id : team?.id;
     // Add owner as member
     if (teamId) {
@@ -232,6 +232,7 @@ window.sendInvite = async function() {
       role,
       token,
       invited_by: STATE.user.id,
+      user_id:    STATE.user.id,
     });
 
     // Send invite email via Supabase Edge Function (or show link to copy)
