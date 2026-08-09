@@ -9,7 +9,7 @@ let STATE = {
   openProject: null,
   data: {
     clients: [], projects: [], finances: [], invoices: [],
-    business_plan: null, user_settings: null, project_credentials: [],
+    business_plan: null, user_settings: null,
     bookmarks: [], tech_stack: [], workflow_templates: [], workflow_steps: [], workflow_runs: [], workflow_run_steps: [],
   },
   loading: true,
@@ -19,14 +19,13 @@ let STATE = {
 async function loadAll() {
   if (!STATE.user) return;
   try {
-    const [clients, projects, finances, invoices, bpList, settingsList, projCreds, bookmarks, techStack, wfTemplates, wfSteps, wfRuns, wfRunSteps, projectTodos, brainstormNotes, clientDocs] = await Promise.all([
+    const [clients, projects, finances, invoices, bpList, settingsList, bookmarks, techStack, wfTemplates, wfSteps, wfRuns, wfRunSteps, projectTodos, brainstormNotes, clientDocs] = await Promise.all([
       db.list("clients"),
       db.list("projects"),
       db.list("finances"),
       db.list("invoices"),
       db.list("business_plan").catch(() => []),
       db.list("user_settings").catch(() => []),
-      db.list("project_credentials").catch(() => []),
       db.list("bookmarks").catch(() => []),
       db.list("tech_stack").catch(() => []),
       db.list("workflow_templates").catch(() => []),
@@ -44,7 +43,6 @@ async function loadAll() {
       invoices:            invoices   || [],
       business_plan:       (bpList || [])[0] || null,
       user_settings:       (settingsList || [])[0] || null,
-      project_credentials: projCreds  || [],
       bookmarks:           bookmarks  || [],
       tech_stack:          techStack   || [],
       workflow_templates: wfTemplates  || [],
