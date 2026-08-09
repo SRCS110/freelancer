@@ -137,10 +137,31 @@ function _sectionRecents(sectionId) {
         })),
       ].slice(0, 4);
     case "money":
-      return (STATE.data.invoices || []).slice(0,3).map(i => ({
-        label: i.invoice_number, action: `navigate('invoices')`,
-        sub: i.client_name || "", badge: i.status
-      }));
+      // Open invoices — unpaid and overdue
+      return (STATE.data.invoices || [])
+        .filter(i => i.status === "Sent" || i.status === "Overdue" || i.status === "Draft")
+        .slice(0, 5)
+        .map(i => ({
+          label: i.invoice_number,
+          action: `navigate('invoices')`,
+          sub: i.client_name || "",
+          badge: i.status,
+          badgeColor: i.status === "Overdue" ? "var(--danger)"
+                    : i.status === "Sent"    ? "var(--accent)"
+                    : "var(--text-muted)",
+        }));
+    case "tools":
+      // Quick links — bookmarks with URLs
+      return (STATE.data.bookmarks || [])
+        .filter(b => b.url)
+        .slice(0, 5)
+        .map(b => ({
+          label: b.name,
+          url:   b.url,
+          action: `window.open('${b.url}','_blank')`,
+          sub:   b.url.replace(/^https?:\/\//, "").split("/")[0],
+          isLink: true,
+        }));
     case "ops":
       return (STATE.data.workflow_runs || [])
         .filter(r => r.status === "active").slice(0,3).map(r => ({
@@ -223,7 +244,7 @@ function sidebarHTML() {
   <!-- Recents -->
   ${recents.length > 0 ? `
   <div class="panel-recents-header">
-    <span>Recent</span>
+    <span>${activeSection === "money" ? "Open Invoices" : activeSection === "tools" ? "Quick Links" : "Recent"}</span>
     <span onclick="_sectionAdd('${activeSection}')"
       style="cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:10px;
       font-weight:700;background:var(--accent);color:var(--accent-fg);
@@ -231,12 +252,15 @@ function sidebarHTML() {
   </div>
   ${recents.map(r => `
   <div class="panel-recent-item" onclick="${r.action}">
-    <span class="panel-recent-dot">◫</span>
-    <div style="min-width:0">
+    <span class="panel-recent-dot">${r.isLink ? "↗" : "◫"}</span>
+    <div style="min-width:0;flex:1">
       <div class="panel-recent-label">${r.label}</div>
       ${r.sub ? `<div class="panel-recent-sub">${r.sub}</div>` : ""}
     </div>
-    ${r.badge ? `<span style="margin-left:auto;font-size:9px;font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--accent)">${r.badge}</span>` : ""}
+    ${r.badge
+      ? `<span style="flex-shrink:0;font-size:9px;font-family:'JetBrains Mono',monospace;font-weight:700;
+           color:${r.badgeColor || "var(--accent)"};white-space:nowrap">${r.badge}</span>`
+      : ""}
   </div>`).join("")}` : ""}
 
   <!-- Footer: theme toggle + sign out -->
