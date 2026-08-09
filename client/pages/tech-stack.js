@@ -63,6 +63,15 @@ ${stack.length === 0
         <div class="stack-amt">${usd(s.amount)}</div>
         <div class="stack-cycle">/${s.cycle}</div>
         ${s.renewal_date ? `<div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted);margin-top:2px">renews ${fmtDate(s.renewal_date)}</div>` : ""}
+        ${(() => {
+          const thisMonth = new Date().toISOString().slice(0,7);
+          const logged = (STATE.data.finances||[]).some(f =>
+            f.description === "Tech Stack: " + s.name &&
+            f.type === "expense" &&
+            f.date?.startsWith(thisMonth)
+          );
+          return logged ? `<div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--accent);margin-top:2px">✓ logged this month</div>` : "";
+        })()}
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0">
         <button class="btn btn-ghost btn-sm" onclick="openStackModal('${s.id}')" style="font-size:10px;padding:4px 8px">edit</button>

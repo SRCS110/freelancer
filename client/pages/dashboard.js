@@ -38,7 +38,8 @@ function dashboardHTML() {
   const rev  = pf.filter(f => f.type === "income").reduce((s, f)  => s + Number(f.amount), 0);
   const exp  = pf.filter(f => f.type === "expense").reduce((s, f) => s + Number(f.amount), 0);
   const unpd = invoices.filter(i => i.status !== "Paid" && i.status !== "Void").reduce((s, i) => s + Number(i.amount), 0);
-  const tax  = Math.max(0, (rev - exp) * 0.25);
+  const taxPct = (STATE.data.user_settings?.tax_rate ?? 25) / 100;
+  const tax  = Math.max(0, (rev - exp) * taxPct);
   const actv = projects.filter(p => p.status === "Active").length;
   const overdue = invoices.filter(i => i.status === "Overdue").length;
 
@@ -101,7 +102,7 @@ ${overdue > 0 ? `
       <div style="font-size:22px;font-weight:700;color:var(--text);font-family:'Space Grotesk',sans-serif">${usd(rev - exp)}</div>
     </div>
     <div style="margin-bottom:12px">
-      <div style="font-size:12px;color:var(--text-muted);margin-bottom:3px">Estimated Tax (25%)</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:3px">Estimated Tax (${STATE.data.user_settings?.tax_rate ?? 25}%)</div>
       <div style="font-size:22px;font-weight:700;color:var(--warning);font-family:'JetBrains Mono',monospace">${usd(tax)}</div>
     </div>
     <div class="progress-bar">

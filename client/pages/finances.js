@@ -58,7 +58,8 @@ function financesHTML() {
 
   const income   = periodEntries.filter(f => f.type === "income").reduce((s, f)  => s + Number(f.amount), 0);
   const expenses = periodEntries.filter(f => f.type === "expense").reduce((s, f) => s + Number(f.amount), 0);
-  const tax      = Math.max(0, (income - expenses) * 0.25);
+  const taxRate  = (STATE.data.user_settings?.tax_rate ?? 25) / 100;
+  const tax      = Math.max(0, (income - expenses) * taxRate);
 
   const catTotals = TAX_CATS
     .map(cat => ({ cat, total: periodEntries.filter(f => f.category === cat).reduce((s, f) => s + Number(f.amount), 0) }))
@@ -116,7 +117,7 @@ function financesHTML() {
   </div>` : `<div class="card"><div class="empty-text" style="color:#2a3048;text-align:center;padding:20px">No entries this period.</div></div>`}
 
   <div class="card">
-    <div class="section-title" style="margin-bottom:14px">Tax Estimate (25%)</div>
+    <div class="section-title" style="margin-bottom:14px">Tax Estimate (${STATE.data.user_settings?.tax_rate ?? 25}%)</div>
     <div style="margin-bottom:12px">
       <div style="font-size:12px;color:var(--text-muted);margin-bottom:3px">Net Profit</div>
       <div style="font-size:22px;font-weight:700;color:var(--text);font-family:'Space Grotesk',sans-serif">${usd(income - expenses)}</div>
