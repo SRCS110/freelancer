@@ -126,23 +126,38 @@ button { font-family: 'Inter', sans-serif; cursor: pointer; border: none; border
 .nav-item:hover  { background: var(--bg-raised); color: var(--text); border-left-color: var(--border-2); }
 .nav-item.active { background: var(--bg-raised); color: var(--accent); border-left-color: var(--accent); }
 
-/* ── Nav groups ─────────────────────────────────────────────── */
-.nav-group-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 20px 4px;
+/* ── Nav groups (Asana-style) ────────────────────────────────── */
+.nav-group { margin-bottom: 4px; }
+
+.nav-group-label {
+  padding: 12px 20px 3px;
   font-family: 'JetBrains Mono', monospace;
   font-size: 9px;
   font-weight: 700;
   color: var(--text-muted);
   letter-spacing: .8px;
   text-transform: uppercase;
-  cursor: pointer;
   user-select: none;
-  transition: color .12s;
 }
-.nav-group-header:hover { color: var(--text); }
+
+.nav-icon {
+  font-family: 'JetBrains Mono', monospace;
+  width: 20px;
+  text-align: center;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.nav-badge {
+  margin-left: auto;
+  background: var(--danger);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-family: 'JetBrains Mono', monospace;
+}
 
 .sidebar-footer {
   margin-top: auto;
