@@ -62,17 +62,35 @@ function invoicesHTML() {
 
 window.setInvFilter    = function(f) { window._invFilter = f; render(); };
 window.updateInvStatus = async function(id, status) {
+  // Update invoice status
   await db.update("invoices", id, { status });
 
-  // When marked Paid — auto-create a finance income entry if one doesn't exist
-  if (status === "Paid") {
-    const inv = STATE.data.invoices.find(i => i.id === id);
-    if (inv) {
-      const desc = `Invoice ${inv.invoice_number}${inv.client_name ? " — " + inv.client_name : ""}`;
-      const alreadyLogged = (STATE.data.finances || []).some(f =>
-        f.description === desc && f.type === "income"
-      );
-      if (!alreadyLogged) {
+  const inv = STATE.data.invoices.find(i => i.id === id);
+
+  if (status === "Paid" && inv) {
+    const desc = `Invoice ${inv.invoice_number}${inv.client_name ? " — " + inv.client_name : ""}`;
+    const alreadyLogged = (STATE.data.finances || []).some(f =>
+      f.description === desc && f.type === "income"
+    );
+    if (!alreadyLogged) {
+      // Build payload without optional FK columns that may not exist yet
+      const finPayload = {
+        type:        "income",
+        description: desc,
+        amount:      Number(inv.amount),
+        category:    "Revenue",
+        date:        new Date().toISOString().slice(0, 10),
+        notes:       "Auto-logged when invoice marked paid",
+      };
+      // Only add FK columns if they have values — avoids schema cache errors
+      if (inv.client_id)  finPayload.client_id  = inv.client_id;
+      if (inv.project_id) finPayload.project_id = inv.project_id;
+
+      try {
+        await db.insert("finances", finPayload);
+        console.log("Auto-logged invoice payment to finances:", desc);
+      } catch(e) {
+        // If FK columns fail, retry without them
         try {
           await db.insert("finances", {
             type:        "income",
@@ -80,29 +98,24 @@ window.updateInvStatus = async function(id, status) {
             amount:      Number(inv.amount),
             category:    "Revenue",
             date:        new Date().toISOString().slice(0, 10),
-            client_id:   inv.client_id   || null,
-            project_id:  inv.project_id  || null,
-            notes:       `Auto-logged when invoice marked paid`,
+            notes:       "Auto-logged when invoice marked paid",
           });
-        } catch(e) {
-          console.warn("Could not auto-log invoice payment:", e.message);
+          console.log("Auto-logged (without FK):", desc);
+        } catch(e2) {
+          console.error("Auto-log failed:", e2.message);
         }
       }
     }
   }
 
-  // When marked Void — optionally remove the auto-logged income entry
-  if (status === "Void") {
-    const inv = STATE.data.invoices.find(i => i.id === id);
-    if (inv) {
-      const desc = `Invoice ${inv.invoice_number}${inv.client_name ? " — " + inv.client_name : ""}`;
-      const existing = (STATE.data.finances || []).find(f =>
-        f.description === desc && f.type === "income" &&
-        f.notes === "Auto-logged when invoice marked paid"
-      );
-      if (existing) {
-        try { await db.delete("finances", existing.id); } catch(e) {}
-      }
+  if (status === "Void" && inv) {
+    const desc = `Invoice ${inv.invoice_number}${inv.client_name ? " — " + inv.client_name : ""}`;
+    const existing = (STATE.data.finances || []).find(f =>
+      f.description === desc && f.type === "income" &&
+      f.notes === "Auto-logged when invoice marked paid"
+    );
+    if (existing) {
+      try { await db.delete("finances", existing.id); } catch(e) {}
     }
   }
 
