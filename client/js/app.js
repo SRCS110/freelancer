@@ -114,7 +114,8 @@ const SIDEBAR_SECTIONS = [
   { id: "workspace", icon: "◈", label: "Workspace",  pages: ["dashboard","clients","projects"] },
   { id: "money",     icon: "◇", label: "Money",      pages: ["finances","invoices"] },
   { id: "tools",     icon: "◉", label: "Tools",      pages: ["bookmarks","tech-stack","brainstorm"] },
-  { id: "ops",       icon: "◳", label: "Operations", pages: ["workflows","team","ai"] },
+  { id: "ops",       icon: "◳", label: "Operations", pages: ["workflows","team"] },
+  { id: "ai",        icon: "✦", label: "AI",          pages: ["ai"] },
 ];
 
 const SECTION_ITEMS = {
@@ -135,6 +136,8 @@ const SECTION_ITEMS = {
   ops: [
     { id: "workflows",    label: "Workflows",    icon: "◳" },
     { id: "team",         label: "Team",         icon: "◎" },
+  ],
+  ai: [
     { id: "ai",           label: "AI Assistant", icon: "✦" },
   ],
 };
@@ -211,8 +214,8 @@ function sidebarHTML() {
   </div>
 
   ${SIDEBAR_SECTIONS.map(sec => `
-  <div class="rail-item${activeSection === sec.id ? " active" : ""}"
-    onclick="setSidebarSection('${sec.id}')"
+  <div class="rail-item${activeSection === sec.id || (sec.id === "ai" && STATE.page === "ai") ? " active" : ""}"
+    onclick="${sec.id === "ai" ? "navigate('ai')" : "setSidebarSection('" + sec.id + "')"}"
     title="${sec.label}">
     <span class="rail-icon">${sec.icon}</span>
     <span class="rail-label">${sec.label}</span>
@@ -233,7 +236,7 @@ function sidebarHTML() {
   </div>
 </div>
 
-<div class="sidebar-panel" id="sidebar-panel"
+<div class="sidebar-panel" style="${STATE.page === 'ai' ? 'display:none' : ''}" id="sidebar-panel"
   onmouseenter="expandSidebar()"
   onmouseleave="collapseSidebar()">
   ${demoBanner}
@@ -337,6 +340,8 @@ function _drawerNav() {
     { label: "Operations", items: [
       { id: "workflows",     label: "Workflows",    icon: "◳" },
       { id: "team",          label: "Team",         icon: "◎" },
+    ]},
+    { label: "AI", items: [
       { id: "ai",            label: "AI Assistant", icon: "✦" },
     ]},
   ];
