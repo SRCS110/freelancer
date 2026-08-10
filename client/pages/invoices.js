@@ -202,7 +202,14 @@ ${bizName}${s.business_email ? "\n" + s.business_email : ""}${s.business_phone ?
 };
 
 window._openMailto = async function(to, subject, body, id) {
-  window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
+  // Use a temporary <a> element — more reliable than location.href in Safari
+  const a = document.createElement("a");
+  a.href = `mailto:${to}?subject=${subject}&body=${body}`;
+  a.style.display = "none";
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => document.body.removeChild(a), 100);
+
   // Mark as Sent if still Draft
   const inv = STATE.data.invoices.find(i => i.id === id);
   if (inv?.status === "Draft") {

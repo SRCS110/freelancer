@@ -27,7 +27,13 @@ function techStackHTML() {
     <div class="page-title">// tech_stack</div>
     <div class="page-sub">${stack.length} service${stack.length!==1?"s":""} · ${usd(monthly)}/mo · ${usd(annualTotal)}/yr est.</div>
   </div>
-  <button class="btn btn-primary" onclick="openStackModal(null)">+ add</button>
+  <div class="btn-row">
+    <input id="stack-search" placeholder="search tools…"
+      style="width:200px;font-size:12px;padding:7px 12px"
+      oninput="filterStack(this.value)"
+      onkeydown="if(event.key==='Escape'){this.value='';filterStack('')}"/>
+    <button class="btn btn-primary" onclick="openStackModal(null)">+ add</button>
+  </div>
 </div>
 
 <div class="grid-3" style="margin-bottom:24px">
@@ -143,7 +149,11 @@ window.saveStack = async function(id) {
     amount:       parseFloat(document.getElementById("st-amount").value) || 0,
     cycle:        document.getElementById("st-cycle").value,
     url:          document.getElementById("st-url").value.trim(),
-    renewal_date: document.getElementById("st-renewal").value || null,
+    renewal_date: document.getElementById("st-renewal").value ||
+      // Default: today's date so billing day anchor is set correctly
+      (document.getElementById("st-cycle").value !== "one-time"
+        ? new Date().toISOString().slice(0, 10)
+        : null),
     description:  document.getElementById("st-desc").value.trim(),
   };
   if (!body.name) return;
@@ -159,6 +169,22 @@ window.saveStack = async function(id) {
 window.deleteStack = async function(id) {
   if (!confirm("Remove this service?")) return;
   await db.delete("tech_stack", id); loadAll();
+};
+
+window.filterStack = function(q) {
+  const term = q.toLowerCase();
+  const items = document.querySelectorAll(".stack-card");
+  items.forEach(card => {
+    const text = card.textContent.toLowerCase();
+    card.closest("[data-stack-item]")
+      ? (card.closest("[data-stack-item]").style.display = !term || text.includes(term) ? "" : "none")
+      : (card.style.display = !term || text.includes(term) ? "" : "none");
+  });
+  // Also hide empty category headers
+  document.querySelectorAll("[data-stack-category]").forEach(section => {
+    const visible = [...section.querySelectorAll(".stack-card")].some(c => c.style.display !== "none");
+    section.style.display = visible ? "" : "none";
+  });
 };
 
 window.techStackHTML = techStackHTML;

@@ -19,9 +19,16 @@ function clientsHTML() {
     <div class="page-title">// clients</div>
     <div class="page-sub">${clients.length} client${clients.length !== 1 ? "s" : ""} on record</div>
   </div>
-  <button class="btn btn-primary" onclick="openClientModal(null)">+ new client</button>
+  <div class="btn-row">
+    <input id="client-search" placeholder="search clients…"
+      style="width:220px;font-size:12px;padding:7px 12px"
+      oninput="renderClientSearch(this.value)"
+      onkeydown="if(event.key==='Escape'){this.value='';renderClientSearch('')}"/>
+    <button class="btn btn-primary" onclick="openClientModal(null)">+ new client</button>
+  </div>
 </div>
 
+<div id="client-list-container">
 ${clients.length === 0
   ? `<div class="empty">
       <div class="empty-icon" style="font-family:'JetBrains Mono',monospace">◎</div>
@@ -58,6 +65,48 @@ ${clients.length === 0
       }).join("")}
     </div>`}`;
 }
+
+</div>`;
+}
+
+window.renderClientSearch = function(q) {
+  const term = q.toLowerCase();
+  const filtered = STATE.data.clients.filter(c =>
+    !term ||
+    c.name?.toLowerCase().includes(term) ||
+    c.company?.toLowerCase().includes(term) ||
+    c.email?.toLowerCase().includes(term)
+  );
+  // Re-render just the grid
+  const container = document.getElementById("client-list-container");
+  if (!container) return;
+  if (filtered.length === 0) {
+    container.innerHTML = `<div class="empty"><div class="empty-text">no clients match "${q}"</div></div>`;
+    return;
+  }
+  container.innerHTML = filtered.map(c => {
+    const projects = (STATE.data.projects || []).filter(p => p.client_id === c.id);
+    const docs     = (STATE.data.client_documents || []).filter(d => d.client_id === c.id);
+    return `
+    <div style="background:var(--bg-raised);border:1px solid var(--border);border-radius:4px;padding:18px;cursor:pointer;transition:border-color .15s"
+      onclick="openClientFile('${c.id}')"
+      onmouseover="this.style.borderColor='color-mix(in srgb,var(--accent) 40%,transparent)'"
+      onmouseout="this.style.borderColor='var(--border)'">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:10px">
+        <div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--text)">${c.name}</div>
+          ${c.company ? `<div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted);margin-top:2px">${c.company}</div>` : ""}
+        </div>
+        ${badge(c.status)}
+      </div>
+      ${c.email ? `<div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);margin-bottom:4px">${c.email}</div>` : ""}
+      <div style="display:flex;gap:12px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted)">◫ ${projects.length} project${projects.length !== 1 ? "s" : ""}</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted)">◻ ${docs.length} doc${docs.length !== 1 ? "s" : ""}</span>
+      </div>
+    </div>`;
+  }).join("");
+};
 
 window.openClientFile = function(id) {
   window._openClientId = id;
