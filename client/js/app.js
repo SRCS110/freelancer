@@ -189,14 +189,11 @@ const MOBILE_TABS = [
 ];
 
 function mobileBarParts() {
-  const s           = STATE.data.user_settings;
-  const bizName     = s?.business_name || STATE.data.business_plan?.business_name || "Freelancer";
+  const s           = STATE.data?.user_settings;
+  const bizName     = s?.business_name || STATE.data?.business_plan?.business_name || "Freelancer";
   const isLight     = _isLight();
-  const overdueCt   = STATE.data.invoices.filter(i => i.status === "Overdue").length;
+  const overdueCt   = (STATE.data?.invoices || []).filter(i => i.status === "Overdue").length;
   const activeTab   = MOBILE_TABS.find(t => t.pages.includes(STATE.page))?.id || "workspace";
-
-  // Active section pages for drawer
-  const activePages = MOBILE_TABS.find(t => t.id === activeTab)?.pages || [];
 
   const topBar = `<div class="mobile-bar">
   <div class="mobile-bar-logo" onclick="navigate('dashboard')">${bizName}</div>
