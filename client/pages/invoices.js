@@ -125,67 +125,89 @@ window.deleteInv       = async function(id) { if (!confirm("Delete this invoice?
 
 // ── Print / PDF export ─────────────────────────────────────────
 window.emailInvoice = async function(id) {
-  const inv   = STATE.data.invoices.find(i => i.id === id);
+  const inv = STATE.data.invoices.find(i => i.id === id);
   if (!inv) return;
 
-  const items = await _fetchItems(id);
   const s       = STATE.data.user_settings || {};
   const bizName = s.business_name || STATE.data.business_plan?.business_name || "Freelancer";
-  const bizAddr = [
-    s.address_street,
-    [s.address_city, s.address_state, s.address_zip].filter(Boolean).join(", "),
-    s.address_country,
-  ].filter(Boolean).join("\n");
-  const bizPhone = s.business_phone || "";
-  const bizEmail = s.business_email || "";
-
-  // Build line items text
-  const itemLines = items.length > 0
-    ? items.map(it => `  • ${it.description} — ${it.quantity} × $${Number(it.unit_price).toFixed(2)} = $${Number(it.amount || it.quantity * it.unit_price).toFixed(2)}`).join("\n")
-    : `  • Services rendered — $${Number(inv.amount).toFixed(2)}`;
-
+  const client  = (STATE.data.clients || []).find(c => c.id === inv.client_id);
+  const clientEmail = client?.email || "";
+  const subject = encodeURIComponent(`Invoice ${inv.invoice_number} from ${bizName}`);
   const dueStr  = inv.due_date
     ? new Date(inv.due_date).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
     : "Upon receipt";
 
-  const subject = encodeURIComponent(`Invoice ${inv.invoice_number} from ${bizName}`);
-
   const body = encodeURIComponent(
 `Hi ${inv.client_name || "there"},
 
-Please find your invoice details below.
+Please find the attached invoice for your records.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-INVOICE #${inv.invoice_number}
-From: ${bizName}${bizAddr ? "\n" + bizAddr : ""}${bizPhone ? "\nPhone: " + bizPhone : ""}${bizEmail ? "\nEmail: " + bizEmail : ""}
+Invoice #: ${inv.invoice_number}
+Amount Due: $${Number(inv.amount).toFixed(2)}
+Due Date: ${dueStr}
 
-To: ${inv.client_name || ""}
-Project: ${inv.project_name || ""}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-${itemLines}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-TOTAL DUE: $${Number(inv.amount).toFixed(2)}
-Due Date:  ${dueStr}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-${inv.notes ? `Notes: ${inv.notes}\n\n` : ""}Please reply to this email to confirm receipt or with any questions.
+${inv.notes ? "Notes: " + inv.notes + "\n\n" : ""}Please don't hesitate to reach out with any questions.
 
 Thank you,
-${bizName}`
+${bizName}${s.business_email ? "\n" + s.business_email : ""}${s.business_phone ? "\n" + s.business_phone : ""}`
   );
 
-  // Get client email if available
-  const client    = (STATE.data.clients || []).find(c => c.id === inv.client_id);
-  const clientEmail = client?.email || "";
+  // Step 1 — Generate and download the PDF first
+  await printInvoice(id);
 
-  // Open mailto — uses user's default email app
-  window.location.href = `mailto:${clientEmail}?subject=${subject}&body=${body}`;
+  // Step 2 — Show instruction modal then open email
+  showModal(`
+<div class="modal-header">
+  <div class="modal-title">send invoice</div>
+  <button class="modal-close" onclick="closeModal()">×</button>
+</div>
 
+<div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px">
+  <div style="display:flex;gap:14px;align-items:flex-start;padding:14px;
+    background:color-mix(in srgb,var(--accent) 8%,transparent);
+    border:1px solid color-mix(in srgb,var(--accent) 25%,transparent);
+    border-radius:4px">
+    <span style="font-family:'JetBrains Mono',monospace;font-size:18px;color:var(--accent);flex-shrink:0">1</span>
+    <div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:var(--text);margin-bottom:2px">
+        PDF downloaded
+      </div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted);line-height:1.5">
+        <strong>${inv.invoice_number}.pdf</strong> has been saved to your Downloads folder.
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:14px;align-items:flex-start;padding:14px;
+    background:var(--bg);border:1px solid var(--border);border-radius:4px">
+    <span style="font-family:'JetBrains Mono',monospace;font-size:18px;color:var(--text-muted);flex-shrink:0">2</span>
+    <div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:var(--text);margin-bottom:2px">
+        Your email will open
+      </div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted);line-height:1.5">
+        Click "Continue" to open a pre-filled email${clientEmail ? " to <strong>" + clientEmail + "</strong>" : ""}.
+        Attach the PDF from your Downloads before sending.
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-actions">
+  <button class="btn btn-ghost" onclick="closeModal()">cancel</button>
+  <button class="btn btn-primary" onclick="closeModal();_openMailto('${clientEmail}','${subject}','${body}','${id}')">
+    continue → open email
+  </button>
+</div>`);
+};
+
+window._openMailto = async function(to, subject, body, id) {
+  window.location.href = \`mailto:\${to}?subject=\${subject}&body=\${body}\`;
   // Mark as Sent if still Draft
-  if (inv.status === "Draft") {
-    await updateInvStatus(id, "Sent");
+  const inv = STATE.data.invoices.find(i => i.id === id);
+  if (inv?.status === "Draft") {
+    await db.update("invoices", id, { status: "Sent" });
+    await loadAll();
   }
 };
 
