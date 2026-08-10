@@ -167,6 +167,11 @@ function projectFileHTML(p) {
     </div>
     <input type="hidden" id="todo-section-${p.id}"/>
   </div>
+
+  <!-- Task list -->
+  <div id="todo-list-${p.id}">
+    ${_todoListHTML(p.id)}
+  </div>
 </div>`;
 }
 
