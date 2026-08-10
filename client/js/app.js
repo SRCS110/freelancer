@@ -140,8 +140,18 @@ function sidebarHTML() {
   const isLight     = _isLight();
 
   return `
-<div class="sidebar">
-  <div class="sidebar-logo" onclick="navigate('dashboard')" style="cursor:pointer">${bizName}</div>
+<div class="sidebar-hotzone" onmouseenter="openDock()"></div>
+<div class="sidebar-backdrop${STATE._dockOpen ? " open" : ""}" onclick="closeDock()"></div>
+<div class="sidebar-tab" onclick="openDock()" title="Open menu"></div>
+
+<div class="sidebar${STATE._dockOpen ? " open" : ""}">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 20px 4px">
+    <div class="sidebar-logo" onclick="navigate('dashboard');closeDock()" style="cursor:pointer">${bizName}</div>
+    <button onclick="closeDock()"
+      style="background:none;border:none;color:var(--text-muted);font-size:18px;
+             cursor:pointer;padding:0;line-height:1;opacity:.6"
+      onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.6">×</button>
+  </div>
   <div class="sidebar-sub">Business OS</div>
   ${demoBanner}
 
@@ -174,6 +184,38 @@ function sidebarHTML() {
   </div>
 </div>`;
 }
+
+// ── Dock functions ────────────────────────────────────────────
+window.openDock = function() {
+  if (window.innerWidth <= 640) return;
+  STATE._dockOpen = true;
+  render();
+  // Set up mouseleave detection on the sidebar itself
+  setTimeout(() => {
+    const sidebar = document.querySelector(".sidebar");
+    if (sidebar) sidebar.addEventListener("mouseleave", _dockMouseLeave, { once: true });
+  }, 50);
+};
+
+function _dockMouseLeave(e) {
+  // Only close if mouse actually left the sidebar area
+  if (!e.relatedTarget || !e.relatedTarget.closest?.(".sidebar")) {
+    window.closeDock();
+  }
+}
+
+window.closeDock = function() {
+  STATE._dockOpen = false;
+  render();
+};
+
+// Close dock when navigating
+const _origNavigate = window.navigate;
+window.navigate = function(page) {
+  window.closeDock();
+  if (_origNavigate) _origNavigate(page);
+};
+
 
 
 // ── Mobile bar + drawer ───────────────────────────────────────
