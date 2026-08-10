@@ -188,7 +188,7 @@ const MOBILE_TABS = [
   { id: "ops",       icon: "◳", label: "Ops",   pages: ["workflows","team","ai"] },
 ];
 
-function mobileBarHTML() {
+function mobileBarParts() {
   const s           = STATE.data.user_settings;
   const bizName     = s?.business_name || STATE.data.business_plan?.business_name || "Freelancer";
   const isLight     = _isLight();
@@ -198,9 +198,7 @@ function mobileBarHTML() {
   // Active section pages for drawer
   const activePages = MOBILE_TABS.find(t => t.id === activeTab)?.pages || [];
 
-  return `
-<!-- Top bar -->
-<div class="mobile-bar">
+  const topBar = `<div class="mobile-bar">
   <div class="mobile-bar-logo" onclick="navigate('dashboard')">${bizName}</div>
   <div class="mobile-bar-actions">
     <!-- Theme toggle -->
@@ -218,16 +216,18 @@ function mobileBarHTML() {
   </div>
 </div>
 
-<!-- Mobile drawer (slides from left for sub-nav within a tab) -->
-<div class="mobile-drawer" id="mobile-drawer" onclick="closeDrawerOnBackdrop(event)">
+`;
+
+  const drawer = `<div class="mobile-drawer" id="mobile-drawer" onclick="closeDrawerOnBackdrop(event)">
   <div class="mobile-drawer-backdrop"></div>
   <div class="mobile-drawer-panel">
     ${_drawerNav()}
   </div>
 </div>
 
-<!-- Bottom tab bar -->
-<div class="mobile-tabs">
+`;
+
+  const bottomTabs = `<div class="mobile-tabs">
   ${MOBILE_TABS.map(tab => {
     const isActive = tab.id === activeTab;
     const hasOverdue = tab.id === "money" && overdueCt > 0;
@@ -241,6 +241,8 @@ function mobileBarHTML() {
   </div>`;
   }).join("")}
 </div>`;
+
+  return { topBar, drawer, bottomTabs };
 }
 
 // Tapping a bottom tab:
@@ -324,7 +326,17 @@ function render() {
     </div>`;
   }
 
-  root.innerHTML = sidebarHTML() + mobileBarHTML() + `<div class="main">${content}</div>`;
+  const { topBar, bottomTabs, drawer } = mobileBarParts();
+  root.innerHTML = sidebarHTML() + topBar + drawer + `<div class="main">${content}</div>`;
+
+  // Bottom tabs live outside root — fixed to screen bottom
+  let tabsEl = document.getElementById("mobile-tabs-bar");
+  if (!tabsEl) {
+    tabsEl = document.createElement("div");
+    tabsEl.id = "mobile-tabs-bar";
+    document.body.appendChild(tabsEl);
+  }
+  tabsEl.innerHTML = bottomTabs;
 
 }
 
