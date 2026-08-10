@@ -1,3 +1,4 @@
+// Uses SUPABASE_URL from auth.js via global scope
 // ============================================================
 //  Freelancer — client/js/ai-assistant.js
 //  BYOK AI Assistant — full page under Operations > AI.
@@ -414,27 +415,51 @@ async function _sendMessage_noHistory(userMsg) {
   const provider = _getProvider();
   const model    = _getModel();
   if (!key) return { error: "No API key connected. Click '⚙ settings' to add your key." };
+
+  // Route through Supabase Edge Function proxy to handle CORS
+  const proxyUrl = SUPABASE_URL.replace(/\/+$/, "") + "/functions/v1/ai-proxy";
+
   try {
-    let reply;
+    let body, reply;
+
     if (provider === "openai") {
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${key}` },
-        body: JSON.stringify({ model, messages: [{ role: "system", content: _buildSystemPrompt() }, ..._aiHistory.slice(-12)], max_tokens: 1000, temperature: 0.7 }),
-      });
-      if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || `OpenAI ${res.status}`); }
-      reply = (await res.json()).choices[0]?.message?.content || "";
+      body = {
+        model,
+        messages: [{ role: "system", content: _buildSystemPrompt() }, ..._aiHistory.slice(-12)],
+        max_tokens: 1000,
+        temperature: 0.7,
+      };
     } else {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01" },
-        body: JSON.stringify({ model, system: _buildSystemPrompt(), messages: _aiHistory.slice(-12), max_tokens: 1000 }),
-      });
-      if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || `Anthropic ${res.status}`); }
-      reply = (await res.json()).content[0]?.text || "";
+      body = {
+        model,
+        system:   _buildSystemPrompt(),
+        messages: _aiHistory.slice(-12),
+        max_tokens: 1000,
+      };
     }
+
+    const res = await fetch(proxyUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key":    key,
+        "x-provider":   provider,
+      },
+      body: JSON.stringify(body),
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || `API error ${res.status}`);
+
+    if (provider === "openai") {
+      reply = data.choices?.[0]?.message?.content || "";
+    } else {
+      reply = data.content?.[0]?.text || "";
+    }
+
     _aiHistory.push({ role: "assistant", content: reply });
     return { text: reply };
+
   } catch(e) {
     return { error: e.message };
   }
