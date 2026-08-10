@@ -114,7 +114,7 @@ const SIDEBAR_SECTIONS = [
   { id: "workspace", icon: "◈", label: "Workspace",  pages: ["dashboard","clients","projects"] },
   { id: "money",     icon: "◇", label: "Money",      pages: ["finances","invoices"] },
   { id: "tools",     icon: "◉", label: "Tools",      pages: ["bookmarks","tech-stack","brainstorm"] },
-  { id: "ops",       icon: "◳", label: "Operations", pages: ["workflows","team"] },
+  { id: "ops",       icon: "◳", label: "Operations", pages: ["workflows","team","ai"] },
 ];
 
 const SECTION_ITEMS = {
@@ -135,6 +135,7 @@ const SECTION_ITEMS = {
   ops: [
     { id: "workflows",    label: "Workflows",    icon: "◳" },
     { id: "team",         label: "Team",         icon: "◎" },
+    { id: "ai",           label: "AI Assistant", icon: "✦" },
   ],
 };
 
@@ -336,6 +337,7 @@ function _drawerNav() {
     { label: "Operations", items: [
       { id: "workflows",     label: "Workflows",    icon: "◳" },
       { id: "team",          label: "Team",         icon: "◎" },
+      { id: "ai",            label: "AI Assistant", icon: "✦" },
     ]},
   ];
   const overdueCt   = STATE.data.invoices.filter(i => i.status === "Overdue").length;
@@ -424,6 +426,7 @@ function render() {
     else if (STATE.page === "workflows")                         content = workflowsHTML();
     else if (STATE.page === "brainstorm")                        content = brainstormHTML();
     else if (STATE.page === "team")                              content = teamHTML();
+    else if (STATE.page === "ai")                               content = aiPageHTML();
   } catch(e) {
     console.error("render error on page", STATE.page, ":", e.message, e.stack);
     content = `<div class="card" style="border-color:var(--danger)">
@@ -433,6 +436,7 @@ function render() {
   }
 
   root.innerHTML = sidebarHTML() + mobileBarHTML() + `<div class="main">${content}</div>`;
+
 }
 
 // ── Nav group collapse ────────────────────────────────────────
@@ -624,4 +628,5 @@ waitForAuth(async function() {
   await handleInviteToken();
   await autoLogTechStackExpenses();
   await runOnboarding();
+  window.initAI();
 });
