@@ -20,10 +20,14 @@ function clientsHTML() {
     <div class="page-sub">${clients.length} client${clients.length !== 1 ? "s" : ""} on record</div>
   </div>
   <div class="btn-row">
-    <input id="client-search" placeholder="search clients…"
-      style="width:220px;font-size:12px;padding:7px 12px"
-      oninput="renderClientSearch(this.value)"
-      onkeydown="if(event.key==='Escape'){this.value='';renderClientSearch('')}"/>
+    <div style="position:relative;min-width:220px">
+      <input id="client-search" placeholder="search clients…"
+        style="padding-left:32px;width:100%"
+        oninput="renderClientSearch(this.value)"
+        onkeydown="if(event.key==='Escape'){this.value='';renderClientSearch('')}"/>
+      <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);
+                   color:var(--text-muted);font-size:14px;pointer-events:none">⌕</span>
+    </div>
     <button class="btn btn-primary" onclick="openClientModal(null)">+ new client</button>
   </div>
 </div>

@@ -15,7 +15,17 @@ function projectsListHTML() {
     <div class="page-title">Projects</div>
     <div class="page-sub">${projects.length} project${projects.length !== 1 ? "s" : ""} — click any card to open its file</div>
   </div>
-  <button class="btn btn-primary" onclick="openProjectModal(null)">+ New Project</button>
+  <div class="btn-row">
+    <div style="position:relative;min-width:220px">
+      <input id="project-search" placeholder="search projects…"
+        style="padding-left:32px;width:100%"
+        oninput="renderProjectSearch(this.value)"
+        onkeydown="if(event.key==='Escape'){this.value='';renderProjectSearch('')}"/>
+      <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);
+                   color:var(--text-muted);font-size:14px;pointer-events:none">⌕</span>
+    </div>
+    <button class="btn btn-primary" onclick="openProjectModal(null)">+ New Project</button>
+  </div>
 </div>
 
 <div class="filter-row">
@@ -238,9 +248,9 @@ window.deleteProject = async function(id) {
 };
 
 window.renderProjectSearch = function(q) {
-  const term     = q.toLowerCase();
-  const filtered = STATE.data.projects.filter(p =>
-    !term ||
+  const term     = (q || "").toLowerCase();
+  const all      = STATE.data.projects || [];
+  const filtered = !term ? all : all.filter(p =>
     p.name?.toLowerCase().includes(term) ||
     p.client_name?.toLowerCase().includes(term) ||
     p.description?.toLowerCase().includes(term) ||
@@ -249,24 +259,24 @@ window.renderProjectSearch = function(q) {
   const container = document.querySelector(".projects-grid");
   if (!container) return;
   if (filtered.length === 0) {
-    container.innerHTML = `<div class="empty" style="grid-column:1/-1"><div class="empty-text">no projects match "${q}"</div></div>`;
+    container.innerHTML = `<div class="empty" style="grid-column:1/-1">
+      <div class="empty-text">no projects match "${q}"</div>
+    </div>`;
     return;
   }
-  // Re-use STATUS_COLORS from the page
   container.innerHTML = filtered.map(p => {
     const col = STATUS_COLORS[p.status] || "var(--text-muted)";
     return `
-    <div class="project-card" onclick="openProjectById('${p.id}')">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px">
-        <div class="project-card-name">${p.name}</div>
-        ${badge(p.status)}
-      </div>
-      <div class="project-card-client">${p.client_name || "—"}</div>
-      <div style="display:flex;gap:12px;padding-top:10px;border-top:1px solid var(--border)">
-        ${p.deadline ? `<span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted)">${fmtDate(p.deadline)}</span>` : ""}
-        ${p.budget   ? `<span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted)">${usd(p.budget)}</span>` : ""}
-      </div>
-    </div>`;
+<div class="project-card" onclick='openProject(${JSON.stringify(p).replace(/'/g,"&#39;")})'>
+  <div style="height:3px;background:${col};border-radius:2px;margin-bottom:14px"></div>
+  <div style="display:flex;justify-content:space-between;align-items:flex-start">
+    <div>
+      <div class="project-card-name">${p.name}</div>
+      <div class="project-card-client">${p.client_name || "No client"}</div>
+    </div>
+    ${badge(p.status)}
+  </div>
+</div>`;
   }).join("");
 };
 
@@ -600,13 +610,24 @@ window.updateTodo = async function(id) {
 };
 
 window.deleteTodo = async function(id) {
+  if (!confirm("Delete this task?")) return;
   try {
     await db.delete("project_todos", id);
+    // Optimistic update in state
     if (STATE.data.project_todos) {
       STATE.data.project_todos = STATE.data.project_todos.filter(t => t.id !== id);
     }
-    _refreshTodoList(STATE.openProject?.id);
-  } catch(e) { console.error(e); }
+    // Try fast DOM refresh first, fall back to full reload
+    const pid = STATE.openProject?.id;
+    if (pid) {
+      _refreshTodoList(pid);
+    } else {
+      await loadAll();
+    }
+  } catch(e) {
+    console.error("deleteTodo error:", e);
+    alert(e.message);
+  }
 };
 
 

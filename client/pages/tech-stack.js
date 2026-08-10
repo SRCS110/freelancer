@@ -28,10 +28,14 @@ function techStackHTML() {
     <div class="page-sub">${stack.length} service${stack.length!==1?"s":""} · ${usd(monthly)}/mo · ${usd(annualTotal)}/yr est.</div>
   </div>
   <div class="btn-row">
-    <input id="stack-search" placeholder="search tools…"
-      style="width:200px;font-size:12px;padding:7px 12px"
-      oninput="filterStack(this.value)"
-      onkeydown="if(event.key==='Escape'){this.value='';filterStack('')}"/>
+    <div style="position:relative;min-width:220px">
+      <input id="stack-search" placeholder="search tools…"
+        style="padding-left:32px;width:100%"
+        oninput="filterStack(this.value)"
+        onkeydown="if(event.key==='Escape'){this.value='';filterStack('')}"/>
+      <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);
+                   color:var(--text-muted);font-size:14px;pointer-events:none">⌕</span>
+    </div>
     <button class="btn btn-primary" onclick="openStackModal(null)">+ add</button>
   </div>
 </div>
