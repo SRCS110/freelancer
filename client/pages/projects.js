@@ -114,7 +114,7 @@ function projectFileHTML(p) {
   </div>
 </div>
 
-<div class="card" style="margin-top:16px;padding:0;overflow:hidden">
+<div class="card" style="margin-top:16px;padding:0;overflow:visible">
   <!-- Header -->
   <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)">
     <div style="display:flex;align-items:center;gap:10px">
@@ -130,7 +130,7 @@ function projectFileHTML(p) {
   </div>
 
   <!-- Column headers -->
-  <div style="display:grid;grid-template-columns:1fr 110px 110px 80px 24px;gap:0;padding:6px 20px;background:var(--bg);border-bottom:1px solid var(--border)">
+  <div style="display:grid;grid-template-columns:1fr 110px 110px 60px 90px;gap:0;padding:6px 20px;background:var(--bg);border-bottom:1px solid var(--border)">
     <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px">Task</div>
     <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px">Assignee</div>
     <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px">Due Date</div>
@@ -138,13 +138,8 @@ function projectFileHTML(p) {
     <div></div>
   </div>
 
-  <!-- Task list -->
-  <div id="todo-list-${p.id}">
-    ${_todoListHTML(p.id)}
-  </div>
-
-  <!-- Inline add row (hidden) -->
-  <div id="todo-input-${p.id}" style="display:none;padding:10px 20px;background:var(--bg);border-top:1px solid var(--border)">
+  <!-- Inline add row (hidden) — at TOP so new tasks appear above existing ones -->
+  <div id="todo-input-${p.id}" style="display:none;padding:10px 20px;background:var(--bg);border-bottom:1px solid var(--border)">
     <div style="display:grid;grid-template-columns:1fr 110px 110px 80px auto;gap:8px;align-items:center">
       <input id="todo-text-${p.id}" placeholder="Task name…" style="font-size:13px"
         onkeydown="if(event.key==='Enter')saveTodo('${p.id}',null);if(event.key==='Escape')closeTodoInput('${p.id}')"/>
@@ -242,6 +237,39 @@ window.deleteProject = async function(id) {
   loadAll();
 };
 
+window.renderProjectSearch = function(q) {
+  const term     = q.toLowerCase();
+  const filtered = STATE.data.projects.filter(p =>
+    !term ||
+    p.name?.toLowerCase().includes(term) ||
+    p.client_name?.toLowerCase().includes(term) ||
+    p.description?.toLowerCase().includes(term) ||
+    p.status?.toLowerCase().includes(term)
+  );
+  const container = document.querySelector(".projects-grid");
+  if (!container) return;
+  if (filtered.length === 0) {
+    container.innerHTML = `<div class="empty" style="grid-column:1/-1"><div class="empty-text">no projects match "${q}"</div></div>`;
+    return;
+  }
+  // Re-use STATUS_COLORS from the page
+  container.innerHTML = filtered.map(p => {
+    const col = STATUS_COLORS[p.status] || "var(--text-muted)";
+    return `
+    <div class="project-card" onclick="openProjectById('${p.id}')">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px">
+        <div class="project-card-name">${p.name}</div>
+        ${badge(p.status)}
+      </div>
+      <div class="project-card-client">${p.client_name || "—"}</div>
+      <div style="display:flex;gap:12px;padding-top:10px;border-top:1px solid var(--border)">
+        ${p.deadline ? `<span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted)">${fmtDate(p.deadline)}</span>` : ""}
+        ${p.budget   ? `<span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted)">${usd(p.budget)}</span>` : ""}
+      </div>
+    </div>`;
+  }).join("");
+};
+
 window.projectsListHTML = projectsListHTML;
 // ── Todo helpers ──────────────────────────────────────────────
 function _projectTodos(pid) {
@@ -262,7 +290,7 @@ const PRI_DOT   = { high: "●", normal: "◆", low: "○" };
 function _todoRow(t, pid) {
   const isOverdue = t.due_date && new Date(t.due_date) < new Date() && !t.completed;
   return `
-<div style="display:grid;grid-template-columns:1fr 110px 110px 80px 24px;gap:0;
+<div style="display:grid;grid-template-columns:1fr 110px 110px 60px 90px;gap:0;
   padding:8px 20px;border-bottom:1px solid var(--border);
   opacity:${t.completed ? ".45" : "1"};
   background:${t.completed ? "color-mix(in srgb,var(--bg) 60%,transparent)" : "transparent"};
@@ -284,8 +312,8 @@ function _todoRow(t, pid) {
     <div style="min-width:0">
       <div style="font-family:'JetBrains Mono',monospace;font-size:12px;
         color:var(--text);${t.completed ? "text-decoration:line-through" : ""};
-        white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.title}</div>
-      ${t.notes ? `<div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.notes}</div>` : ""}
+        white-space:normal;word-break:break-word;line-height:1.4">${t.title}</div>
+      ${t.notes ? `<div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted);margin-top:3px;white-space:normal;word-break:break-word;line-height:1.4">${t.notes}</div>` : ""}
     </div>
   </div>
 
@@ -496,7 +524,7 @@ window.saveTodo = async function(pid, sectionId) {
       project_id: pid, title, assignee: assignee || null,
       priority, due_date: due || null,
       section_id: secId || null,
-      sort_order: todos.length, completed: false,
+      sort_order: -Date.now(), completed: false, // negative timestamp = always sorts to top
     });
     await loadAll(); closeTodoInput(pid);
   } catch(e) { alert(e.message); }
