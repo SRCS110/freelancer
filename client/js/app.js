@@ -179,83 +179,89 @@ function sidebarHTML() {
 
 
 
-// ── Mobile bar + drawer ───────────────────────────────────────
+// ── Mobile bar + drawer + bottom tabs ────────────────────────
+
+const MOBILE_TABS = [
+  { id: "workspace", icon: "◈", label: "Work",  pages: ["dashboard","clients","projects"] },
+  { id: "money",     icon: "◇", label: "Money", pages: ["finances","invoices"] },
+  { id: "tools",     icon: "◉", label: "Tools", pages: ["bookmarks","tech-stack","brainstorm"] },
+  { id: "ops",       icon: "◳", label: "Ops",   pages: ["workflows","team","ai"] },
+];
+
 function mobileBarHTML() {
+  const s           = STATE.data.user_settings;
+  const bizName     = s?.business_name || STATE.data.business_plan?.business_name || "Freelancer";
+  const isLight     = _isLight();
+  const overdueCt   = STATE.data.invoices.filter(i => i.status === "Overdue").length;
+  const activeTab   = MOBILE_TABS.find(t => t.pages.includes(STATE.page))?.id || "workspace";
+
+  // Active section pages for drawer
+  const activePages = MOBILE_TABS.find(t => t.id === activeTab)?.pages || [];
+
   return `
+<!-- Top bar -->
 <div class="mobile-bar">
-  <div class="mobile-bar-logo" onclick="navigate('dashboard')" style="cursor:pointer">${STATE.data.user_settings?.business_name || STATE.data.business_plan?.business_name || "Freelancer"}</div>
-  <button class="hamburger" id="hamburger-btn" onclick="toggleDrawer()">
-    <span></span><span></span><span></span>
-  </button>
+  <div class="mobile-bar-logo" onclick="navigate('dashboard')">${bizName}</div>
+  <div class="mobile-bar-actions">
+    <!-- Theme toggle -->
+    <button class="mobile-bar-btn" onclick="toggleTheme()" title="${isLight ? "dark" : "light"} mode">
+      ${isLight ? "◑" : "◐"}
+    </button>
+    <!-- AI Assistant -->
+    <button class="mobile-bar-btn${STATE.page === "ai" ? " active" : ""}"
+      onclick="navigate('ai')" title="AI Assistant">✦</button>
+    <!-- Account -->
+    <button class="mobile-bar-btn${STATE.page === "settings" ? " active" : ""}"
+      onclick="navigate('settings')" title="Account">
+      <span style="font-size:12px;font-weight:700">${(s?.display_name || "?").charAt(0).toUpperCase()}</span>
+    </button>
+  </div>
 </div>
 
+<!-- Mobile drawer (slides from left for sub-nav within a tab) -->
 <div class="mobile-drawer" id="mobile-drawer" onclick="closeDrawerOnBackdrop(event)">
   <div class="mobile-drawer-backdrop"></div>
   <div class="mobile-drawer-panel">
     ${_drawerNav()}
   </div>
+</div>
+
+<!-- Bottom tab bar -->
+<div class="mobile-tabs">
+  ${MOBILE_TABS.map(tab => {
+    const isActive = tab.id === activeTab;
+    const hasOverdue = tab.id === "money" && overdueCt > 0;
+    return `
+  <div class="mobile-tab${isActive ? " active" : ""}" onclick="mobileTabClick('${tab.id}')">
+    <div style="position:relative;display:inline-flex">
+      <span class="mobile-tab-icon">${tab.icon}</span>
+      ${hasOverdue ? `<span style="position:absolute;top:-2px;right:-6px;width:7px;height:7px;background:var(--danger);border-radius:50%;border:1.5px solid var(--bg)"></span>` : ""}
+    </div>
+    <span class="mobile-tab-label">${tab.label}</span>
+  </div>`;
+  }).join("")}
 </div>`;
 }
 
-function _drawerNav() {
-  const demoBanner = window.DEMO_MODE ? demoBannerHTML() : "";
-  const NAV_GROUPS = [
-    { label: "Workspace", items: [
-      { id: "dashboard",     label: "Dashboard",    icon: "◈" },
-      { id: "clients",       label: "Clients",      icon: "◎" },
-      { id: "projects",      label: "Projects",     icon: "◫" },
-    ]},
-    { label: "Money", items: [
-      { id: "finances",      label: "Finances",     icon: "◇" },
-      { id: "invoices",      label: "Invoices",     icon: "◻" },
-    ]},
-    { label: "Tools", items: [
-      { id: "bookmarks",     label: "Bookmarks",    icon: "◉" },
-      { id: "tech-stack",    label: "Tech Stack",   icon: "◳" },
-      { id: "brainstorm",    label: "Brainstorm",   icon: "◆" },
-    ]},
-    { label: "Operations", items: [
-      { id: "workflows",     label: "Workflows",    icon: "◳" },
-      { id: "team",          label: "Team",         icon: "◎" },
-    ]},
-    { label: "AI", items: [
-      { id: "ai",            label: "AI Assistant", icon: "✦" },
-    ]},
-  ];
-  const overdueCt   = STATE.data.invoices.filter(i => i.status === "Overdue").length;
-  const s           = STATE.data.user_settings;
-  const usr         = STATE.user;
-  const displayName = s?.display_name || usr?.email?.split("@")[0] || "account";
-  const isLight     = document.body.classList.contains("light");
+// Tapping a bottom tab:
+// - If already on that tab's section → show drawer with sub-pages
+// - If not → navigate to first page in that section
+window.mobileTabClick = function(tabId) {
+  const tab      = MOBILE_TABS.find(t => t.id === tabId);
+  const isActive = tab?.pages.includes(STATE.page);
+  if (isActive && tab.pages.length > 1) {
+    // Show drawer with this tab's sub-pages
+    window._drawerTabFilter = tabId;
+    toggleDrawer();
+  } else {
+    navigate(tab.pages[0]);
+  }
+};
 
-  return demoBanner + NAV_GROUPS.map(group => `
-  <div class="nav-group">
-    <div class="nav-group-label">${group.label}</div>
-    ${group.items.map(n => `
-    <div class="nav-item${STATE.page === n.id ? " active" : ""}" onclick="drawerNavigate('${n.id}')">
-      <span class="nav-icon">${n.icon}</span>
-      <span>${n.label}</span>
-      ${n.id === "invoices" && overdueCt > 0
-        ? `<span class="nav-badge">${overdueCt}</span>`
-        : ""}
-    </div>`).join("")}
-  </div>`).join("") + `
-  <div style="margin-top:auto;padding:16px 20px;border-top:1px solid var(--border)">
-    <div class="theme-toggle" onclick="toggleTheme()" style="margin-bottom:10px">
-      <span>${isLight ? "light" : "dark"} mode</span>
-      <div class="theme-toggle-track${isLight ? " on" : ""}">
-        <div class="theme-toggle-thumb"></div>
-      </div>
-    </div>
-    <div class="nav-item${STATE.page === "settings" ? " active" : ""}"
-      onclick="drawerNavigate('settings')"
-      style="padding:8px 0;margin-bottom:6px">
-      <span style="font-family:'JetBrains Mono',monospace;width:20px;text-align:center;font-size:13px">◈</span>
-      ${displayName}
-    </div>
-    <button class="logout-btn" onclick="doSignOut()">sign out</button>
-  </div>`;
-}
+// Store which tab filter the drawer is showing
+window._drawerTabFilter = null;
+
+
 window.toggleDrawer = function() {
   const drawer = document.getElementById("mobile-drawer");
   const btn    = document.getElementById("hamburger-btn");
@@ -281,6 +287,7 @@ window.closeDrawer = function() {
 
 window.drawerNavigate = function(page) {
   closeDrawer();
+  window._drawerTabFilter = null;
   navigate(page);
 };
 
