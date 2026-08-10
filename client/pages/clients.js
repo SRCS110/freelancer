@@ -67,9 +67,7 @@ ${clients.length === 0
           </div>
         </div>`;
       }).join("")}
-    </div>`}`;
-}
-
+    </div>`}
 </div>`;
 }
 
