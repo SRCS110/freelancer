@@ -108,198 +108,72 @@ window.openProject = function(p) { STATE.openProject = p; STATE.page = "projects
 window.doSignOut   = function() { Auth.signOut(); };
 
 // ── Sidebar ─────────────────────────────────────────────────
-// Two-panel Asana-style: narrow icon rail + expanded section panel
-
-const SIDEBAR_SECTIONS = [
-  { id: "workspace", icon: "◈", label: "Workspace",  pages: ["dashboard","clients","projects"] },
-  { id: "money",     icon: "◇", label: "Money",      pages: ["finances","invoices"] },
-  { id: "tools",     icon: "◉", label: "Tools",      pages: ["bookmarks","tech-stack","brainstorm"] },
-  { id: "ops",       icon: "◳", label: "Operations", pages: ["workflows","team"] },
-  { id: "ai",        icon: "✦", label: "AI",          pages: ["ai"] },
+const NAV_GROUPS = [
+  { label: "Workspace", items: [
+    { id: "dashboard",     label: "Dashboard",    icon: "◈" },
+    { id: "clients",       label: "Clients",      icon: "◎" },
+    { id: "projects",      label: "Projects",     icon: "◫" },
+  ]},
+  { label: "Money", items: [
+    { id: "finances",      label: "Finances",     icon: "◇" },
+    { id: "invoices",      label: "Invoices",     icon: "◻" },
+  ]},
+  { label: "Tools", items: [
+    { id: "bookmarks",     label: "Bookmarks",    icon: "◉" },
+    { id: "tech-stack",    label: "Tech Stack",   icon: "◳" },
+    { id: "brainstorm",    label: "Brainstorm",   icon: "◆" },
+  ]},
+  { label: "Operations", items: [
+    { id: "workflows",     label: "Workflows",    icon: "◳" },
+    { id: "team",          label: "Team",         icon: "◎" },
+    { id: "ai",            label: "AI Assistant", icon: "✦" },
+  ]},
 ];
-
-const SECTION_ITEMS = {
-  workspace: [
-    { id: "dashboard",    label: "Dashboard",    icon: "◈" },
-    { id: "clients",      label: "Clients",      icon: "◎" },
-    { id: "projects",     label: "Projects",     icon: "◫" },
-  ],
-  money: [
-    { id: "finances",     label: "Finances",     icon: "◇" },
-    { id: "invoices",     label: "Invoices",     icon: "◻" },
-  ],
-  tools: [
-    { id: "bookmarks",    label: "Bookmarks",    icon: "◉" },
-    { id: "tech-stack",   label: "Tech Stack",   icon: "◳" },
-    { id: "brainstorm",   label: "Brainstorm",   icon: "◆" },
-  ],
-  ops: [
-    { id: "workflows",    label: "Workflows",    icon: "◳" },
-    { id: "team",         label: "Team",         icon: "◎" },
-  ],
-  ai: [
-    { id: "ai",           label: "AI Assistant", icon: "✦" },
-  ],
-};
-
-// Recents per section — pulled from STATE.data
-function _sectionRecents(sectionId) {
-  switch(sectionId) {
-    case "workspace":
-      return [
-        ...(STATE.data.projects || []).slice(0,3).map(p => ({
-          label: p.name, action: `openProjectById('${p.id}')`, sub: p.client_name || ""
-        })),
-        ...(STATE.data.clients || []).slice(0,2).map(c => ({
-          label: c.name, action: `openClientFile('${c.id}')`, sub: c.company || ""
-        })),
-      ].slice(0, 4);
-    case "money":
-      // Open invoices — unpaid and overdue
-      return (STATE.data.invoices || [])
-        .filter(i => i.status === "Sent" || i.status === "Overdue" || i.status === "Draft")
-        .slice(0, 5)
-        .map(i => ({
-          label: i.invoice_number,
-          action: `navigate('invoices')`,
-          sub: i.client_name || "",
-          badge: i.status,
-          badgeColor: i.status === "Overdue" ? "var(--danger)"
-                    : i.status === "Sent"    ? "var(--accent)"
-                    : "var(--text-muted)",
-        }));
-    case "tools":
-      // Quick links — bookmarks with URLs
-      return (STATE.data.bookmarks || [])
-        .filter(b => b.url)
-        .slice(0, 5)
-        .map(b => ({
-          label: b.name,
-          url:   b.url,
-          action: `window.open('${b.url}','_blank')`,
-          sub:   b.url.replace(/^https?:\/\//, "").split("/")[0],
-          isLink: true,
-        }));
-    case "ops":
-      return (STATE.data.workflow_runs || [])
-        .filter(r => r.status === "active").slice(0,3).map(r => ({
-          label: r.name, action: `openWfRun('${r.id}')`, sub: r.client_name || ""
-        }));
-    default:
-      return [];
-  }
-}
-
-function _activeSection() {
-  return SIDEBAR_SECTIONS.find(s => s.pages.includes(STATE.page))?.id || "workspace";
-}
 
 function sidebarHTML() {
   const s           = STATE.data.user_settings;
   const usr         = STATE.user;
   const displayName = s?.display_name || usr?.email?.split("@")[0] || "account";
-  const activeSection = window._sidebarSection || _activeSection();
-  const items       = SECTION_ITEMS[activeSection] || [];
-  const recents     = _sectionRecents(activeSection);
-  const section     = SIDEBAR_SECTIONS.find(s => s.id === activeSection);
+  const bizName     = s?.business_name || STATE.data.business_plan?.business_name || "Freelancer";
   const overdueCt   = STATE.data.invoices.filter(i => i.status === "Overdue").length;
   const demoBanner  = window.DEMO_MODE ? demoBannerHTML() : "";
+  const isLight     = _isLight();
 
   return `
-<div class="sidebar-rail" id="sidebar-rail"
-  onmouseenter="expandSidebar()"
-  onmouseleave="collapseSidebar()">
-  <div class="rail-logo" onclick="navigate('dashboard')" title="Home">
-    ${(STATE.data.user_settings?.business_name || STATE.data.business_plan?.business_name || "F").charAt(0).toUpperCase()}
-  </div>
-
-  ${SIDEBAR_SECTIONS.map(sec => `
-  <div class="rail-item${activeSection === sec.id || (sec.id === "ai" && STATE.page === "ai") ? " active" : ""}"
-    onclick="${sec.id === "ai" ? "navigate('ai')" : "setSidebarSection('" + sec.id + "')"}"
-    title="${sec.label}">
-    <span class="rail-icon">${sec.icon}</span>
-    <span class="rail-label">${sec.label}</span>
-    ${sec.id === "money" && overdueCt > 0
-      ? `<span class="rail-dot"></span>` : ""}
-  </div>`).join("")}
-
-  <div class="rail-spacer"></div>
-
-  <div class="rail-item${STATE.page === "settings" ? " active" : ""}"
-    onclick="navigate('settings')" title="${displayName}">
-    <span class="rail-icon" style="font-size:10px;font-weight:700;background:var(--accent);
-      color:var(--accent-fg);width:22px;height:22px;border-radius:50%;
-      display:flex;align-items:center;justify-content:center;margin:0 auto">
-      ${displayName.charAt(0).toUpperCase()}
-    </span>
-    <span class="rail-label">${displayName.split(" ")[0]}</span>
-  </div>
-</div>
-
-<div class="sidebar-panel" style="${STATE.page === 'ai' ? 'display:none' : ''}" id="sidebar-panel"
-  onmouseenter="expandSidebar()"
-  onmouseleave="collapseSidebar()">
+<div class="sidebar">
+  <div class="sidebar-logo" onclick="navigate('dashboard')" style="cursor:pointer">${bizName}</div>
+  <div class="sidebar-sub">Business OS</div>
   ${demoBanner}
 
-  <!-- Company header -->
-  <div class="panel-header">
-    <div class="panel-company">${STATE.data.user_settings?.business_name || STATE.data.business_plan?.business_name || "Freelancer"}</div>
-    <div class="panel-os-label">Business OS</div>
-  </div>
-
-  <!-- Section label -->
-  <div class="panel-section-title">${section?.label || ""}</div>
-
-  <!-- Nav items -->
-  ${items.map(n => `
-  <div class="panel-item${STATE.page === n.id ? " active" : ""}" onclick="navigate('${n.id}')">
-    <span class="panel-icon">${n.icon}</span>
-    <span>${n.label}</span>
-    ${n.id === "invoices" && overdueCt > 0
-      ? `<span class="nav-badge" style="margin-left:auto">${overdueCt}</span>` : ""}
+  ${NAV_GROUPS.map(group => `
+  <div class="nav-group">
+    <div class="nav-group-label">${group.label}</div>
+    ${group.items.map(n => `
+    <div class="nav-item${STATE.page === n.id ? " active" : ""}" onclick="navigate('${n.id}')">
+      <span class="nav-icon">${n.icon}</span>
+      <span>${n.label}</span>
+      ${n.id === "invoices" && overdueCt > 0
+        ? `<span class="nav-badge">${overdueCt}</span>` : ""}
+    </div>`).join("")}
   </div>`).join("")}
 
-  <!-- Recents -->
-  ${recents.length > 0 ? `
-  <div class="panel-recents-header">
-    <span>${activeSection === "money" ? "Open Invoices" : activeSection === "tools" ? "Quick Links" : "Recent"}</span>
-    <span onclick="_sectionAdd('${activeSection}')"
-      style="cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:10px;
-      font-weight:700;background:var(--accent);color:var(--accent-fg);
-      padding:2px 8px;border-radius:3px">+ add</span>
-  </div>
-  ${recents.map(r => `
-  <div class="panel-recent-item" onclick="${r.action}">
-    <span class="panel-recent-dot">${r.isLink ? "↗" : "◫"}</span>
-    <div style="min-width:0;flex:1">
-      <div class="panel-recent-label">${r.label}</div>
-      ${r.sub ? `<div class="panel-recent-sub">${r.sub}</div>` : ""}
-    </div>
-    ${r.badge
-      ? `<span style="flex-shrink:0;font-size:9px;font-family:'JetBrains Mono',monospace;font-weight:700;
-           color:${r.badgeColor || "var(--accent)"};white-space:nowrap">${r.badge}</span>`
-      : ""}
-  </div>`).join("")}` : ""}
-
-  <!-- Footer: theme toggle + sign out -->
-  <div class="panel-footer">
-    <div class="theme-toggle" onclick="toggleTheme()" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding:4px 0">
-      <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted);letter-spacing:.4px;text-transform:uppercase">
-        ${_isLight() ? "light mode" : "dark mode"}
-      </span>
-      <div class="theme-toggle-track${_isLight() ? " on" : ""}">
+  <div class="sidebar-footer">
+    <div class="theme-toggle" onclick="toggleTheme()">
+      <span>${isLight ? "light mode" : "dark mode"}</span>
+      <div class="theme-toggle-track${isLight ? " on" : ""}">
         <div class="theme-toggle-thumb"></div>
       </div>
+    </div>
+    <div class="nav-item${STATE.page === "settings" ? " active" : ""}"
+      onclick="navigate('settings')"
+      style="padding:8px 12px;margin-bottom:4px">
+      <span class="nav-icon">◈</span>
+      ${displayName}
     </div>
     <button class="logout-btn" onclick="doSignOut()">sign out</button>
   </div>
 </div>`;
 }
-
-window.setSidebarSection = function(id) {
-  window._sidebarSection = id;
-  render();
-};
 
 
 // ── Mobile bar + drawer ───────────────────────────────────────
@@ -526,42 +400,6 @@ window._sectionAdd = function(section) {
   }
 };
 
-
-// ── Sidebar hover expand/collapse ────────────────────────────
-let _sidebarHoverTimer = null;
-
-window.expandSidebar = function() {
-  clearTimeout(_sidebarHoverTimer);
-  document.getElementById("app")?.classList.remove("sidebar-collapsed");
-};
-
-window.collapseSidebar = function() {
-  // Small delay so moving between rail and panel doesn't flicker
-  _sidebarHoverTimer = setTimeout(() => {
-    // Only collapse if not on mobile
-    if (window.innerWidth > 640) {
-      document.getElementById("app")?.classList.add("sidebar-collapsed");
-    }
-  }, 300);
-};
-
-// Start collapsed on desktop (expand on hover), never on mobile
-(function initSidebarState() {
-  function applyCollapse() {
-    if (window.innerWidth > 640) {
-      document.getElementById("app")?.classList.add("sidebar-collapsed");
-    } else {
-      document.getElementById("app")?.classList.remove("sidebar-collapsed");
-    }
-  }
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", applyCollapse);
-  } else {
-    applyCollapse();
-  }
-  // Re-apply on resize (e.g. rotating device)
-  window.addEventListener("resize", applyCollapse);
-})();
 
 // ── Theme ─────────────────────────────────────────────────────
 function _isLight() { return document.body.classList.contains("light"); }
