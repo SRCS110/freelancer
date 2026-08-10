@@ -345,7 +345,7 @@ button { font-family: 'Inter', sans-serif; cursor: pointer; border: none; border
   display: none;
   position: fixed;
   top: 0; left: 0; right: 0;
-  height: 52px;
+  height: 56px;
   background: var(--bg);
   border-bottom: 1px solid var(--border);
   align-items: center;
@@ -360,14 +360,79 @@ button { font-family: 'Inter', sans-serif; cursor: pointer; border: none; border
   color: var(--accent);
   letter-spacing: 1px;
   text-transform: uppercase;
+  cursor: pointer;
 }
+.mobile-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.mobile-bar-btn {
+  width: 34px; height: 34px;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 15px;
+  font-family: 'JetBrains Mono', monospace;
+  transition: all .15s;
+}
+.mobile-bar-btn:hover { color: var(--accent); border-color: var(--accent); }
+.mobile-bar-btn.active { color: var(--accent); border-color: var(--accent); background: color-mix(in srgb,var(--accent) 10%,transparent); }
+
+/* ── Mobile bottom tab bar ──────────────────────────────────── */
+.mobile-tabs {
+  display: none;
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: 64px;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  z-index: 300;
+  padding: 0 8px;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  align-items: center;
+  justify-content: space-around;
+}
+.mobile-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  flex: 1;
+  height: 100%;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: color .15s;
+  padding: 8px 4px;
+  border-radius: 8px;
+}
+.mobile-tab.active { color: var(--accent); }
+.mobile-tab:active { opacity: .7; }
+.mobile-tab-icon {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 18px;
+  line-height: 1;
+}
+.mobile-tab-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: .3px;
+  text-transform: uppercase;
+}
+
+/* Hamburger kept for drawer */
 .hamburger {
-  width: 36px; height: 36px;
+  width: 34px; height: 34px;
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
   gap: 5px; cursor: pointer;
   background: transparent; border: 1px solid var(--border);
-  border-radius: 4px; padding: 0;
+  border-radius: 8px; padding: 0;
 }
 .hamburger span {
   display: block; width: 16px; height: 1.5px;
@@ -456,8 +521,9 @@ button { font-family: 'Inter', sans-serif; cursor: pointer; border: none; border
   #app { flex-direction: column; height: auto; min-height: 100vh; overflow: visible; }
   .sidebar { display: none !important; }
   .sidebar-backdrop { display: none !important; }
-  .mobile-bar { display: flex; }
-  .main { padding: 16px; padding-top: 68px; }
+  .mobile-bar  { display: flex; }
+  .mobile-tabs { display: flex; }
+  .main { padding: 16px; padding-top: 68px; padding-bottom: 80px; }
 
   /* Project todo — collapse to simpler mobile layout */
   .todo-grid-row {
