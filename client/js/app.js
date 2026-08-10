@@ -176,6 +176,9 @@ function sidebarHTML() {
 }
 
 
+
+
+
 // ── Mobile bar + drawer ───────────────────────────────────────
 function mobileBarHTML() {
   return `
