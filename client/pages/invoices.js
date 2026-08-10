@@ -202,7 +202,7 @@ ${bizName}${s.business_email ? "\n" + s.business_email : ""}${s.business_phone ?
 };
 
 window._openMailto = async function(to, subject, body, id) {
-  window.location.href = \`mailto:\${to}?subject=\${subject}&body=\${body}\`;
+  window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
   // Mark as Sent if still Draft
   const inv = STATE.data.invoices.find(i => i.id === id);
   if (inv?.status === "Draft") {
