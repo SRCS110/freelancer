@@ -309,16 +309,22 @@ function _todoRow(t, pid) {
     </span>
   </div>
 
-  <!-- Actions -->
-  <div style="display:flex;align-items:center;gap:4px;opacity:0" class="todo-actions"
-    onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0'">
+  <!-- Actions — always visible -->
+  <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">
     <button onclick="editTodo('${t.id}')"
-      style="background:none;border:none;color:var(--text-muted);font-size:11px;cursor:pointer;padding:2px;font-family:'JetBrains Mono',monospace"
-      title="edit">✎</button>
+      style="background:none;border:1px solid var(--border);border-radius:3px;
+             color:var(--text-muted);font-size:11px;cursor:pointer;padding:2px 6px;
+             font-family:'JetBrains Mono',monospace;line-height:1.4;transition:all .12s"
+      onmouseover="this.style.color='var(--accent)';this.style.borderColor='var(--accent)'"
+      onmouseout="this.style.color='var(--text-muted)';this.style.borderColor='var(--border)'"
+      title="edit task">edit</button>
     <button onclick="deleteTodo('${t.id}')"
-      style="background:none;border:none;color:var(--border-2);font-size:13px;cursor:pointer;padding:2px;line-height:1"
-      onmouseover="this.style.color='var(--danger)'" onmouseout="this.style.color='var(--border-2)'"
-      title="delete">×</button>
+      style="background:none;border:1px solid var(--border);border-radius:3px;
+             color:var(--text-muted);font-size:12px;cursor:pointer;padding:2px 5px;
+             line-height:1.4;transition:all .12s"
+      onmouseover="this.style.color='var(--danger)';this.style.borderColor='var(--danger)'"
+      onmouseout="this.style.color='var(--text-muted)';this.style.borderColor='var(--border)'"
+      title="delete task">×</button>
   </div>
 </div>`;
 }
