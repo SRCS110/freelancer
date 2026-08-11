@@ -351,7 +351,8 @@ button { font-family: 'Inter', sans-serif; cursor: pointer; border: none; border
   align-items: center;
   justify-content: space-between;
   padding: 0 16px;
-  z-index: 300;
+  z-index: 1000;
+  -webkit-backdrop-filter: blur(8px);
 }
 .mobile-bar-logo {
   font-family: 'JetBrains Mono', monospace;
@@ -390,11 +391,12 @@ button { font-family: 'Inter', sans-serif; cursor: pointer; border: none; border
   height: 64px;
   background: var(--bg);
   border-top: 1px solid var(--border);
-  z-index: 300;
+  z-index: 1000;
   padding: 0 8px;
   padding-bottom: env(safe-area-inset-bottom, 0px);
   align-items: center;
   justify-content: space-around;
+  -webkit-backdrop-filter: blur(8px);
 }
 .mobile-tab {
   display: flex;
@@ -521,8 +523,10 @@ button { font-family: 'Inter', sans-serif; cursor: pointer; border: none; border
   #app { flex-direction: column; height: auto; min-height: 100vh; overflow: visible; }
   .sidebar { display: none !important; }
   .sidebar-backdrop { display: none !important; }
-  .mobile-bar  { display: flex; }
-  .mobile-tabs { display: flex; }
+  .mobile-bar  { display: flex !important; }
+  .mobile-tabs { display: flex !important; }
+  #mobile-tabs-bar .mobile-tabs { display: flex !important; }
+  .sidebar { display: none !important; }
   .main { padding: 16px; padding-top: 68px; padding-bottom: 80px; }
 
   /* Project todo — collapse to simpler mobile layout */
@@ -582,3 +586,5 @@ button { font-family: 'Inter', sans-serif; cursor: pointer; border: none; border
   /* Dash */
   .overdue-banner { font-size: 11px; flex-wrap: wrap; }
 }
+
+#mobile-tabs-bar { position: fixed; bottom: 0; left: 0; right: 0; z-index: 1000; }
