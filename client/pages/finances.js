@@ -157,11 +157,11 @@ ${(() => {
     </div>
   </div>` : `<div class="card"><div class="empty-text" style="color:#2a3048;text-align:center;padding:20px">No entries this period.</div></div>`}
 
-  <div class="card">
+  <div class="card fin-tax-card">
     <div class="section-title" style="margin-bottom:14px">Tax Estimate (${STATE.data.user_settings?.tax_rate ?? 25}%)</div>
     <div style="margin-bottom:12px">
       <div style="font-size:12px;color:var(--text-muted);margin-bottom:3px">Net Profit</div>
-      <div style="font-size:22px;font-weight:700;color:var(--text);font-family:'Space Grotesk',sans-serif">${usd(income - expenses)}</div>
+      <div style="font-size:22px;font-weight:700;color:var(--text);font-family:var(--font-sans)">${usd(income - expenses)}</div>
     </div>
     <div style="margin-bottom:12px">
       <div style="font-size:12px;color:var(--text-muted);margin-bottom:3px">Estimated Tax</div>
@@ -267,16 +267,10 @@ window.openFinModal = function(id) {
 </div>
 <div class="form-row">
   <div class="form-group"><label class="form-label">Project (optional)</label>
-    <select id="f-project">
-      <option value="">— None —</option>
-      ${projects.map(p => `<option value="${p.id}"${f?.project_id === p.id ? " selected" : ""}>${p.name}</option>`).join("")}
-    </select>
+    ${searchPicker("f-project", projects, f?.project_id, "Search projects…")}
   </div>
   <div class="form-group"><label class="form-label">Client (optional)</label>
-    <select id="f-client">
-      <option value="">— None —</option>
-      ${clients.map(c => `<option value="${c.id}"${f?.client_id === c.id ? " selected" : ""}>${c.name}</option>`).join("")}
-    </select>
+    ${searchPicker("f-client", clients, f?.client_id, "Search clients…")}
   </div>
 </div>
 <div class="form-group"><label class="form-label">Description</label>
@@ -297,8 +291,8 @@ window.saveFin = async function(id) {
     category:    document.getElementById("f-cat").value,
     date:        document.getElementById("f-date").value,
     description: document.getElementById("f-desc").value.trim(),
-    project_id:  document.getElementById("f-project").value || null,
-    client_id:   document.getElementById("f-client").value || null,
+    project_id:  pickerValue("f-project", STATE.data.projects),
+    client_id:   pickerValue("f-client",  STATE.data.clients),
   };
   if (!body.amount) return;
   const btn = document.getElementById("f-save-btn");

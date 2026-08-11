@@ -6,7 +6,8 @@
 // ── Projects List ─────────────────────────────────────────────
 function projectsListHTML() {
   const { projects } = STATE.data;
-  const filter   = window._projFilter || "All";
+  // Default to Active — the list you almost always want on open
+  const filter   = window._projFilter || "Active";
   const filtered = filter === "All" ? projects : projects.filter(p => p.status === filter);
 
   return `

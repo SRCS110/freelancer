@@ -383,15 +383,9 @@ window.openInvModal = async function(id) {
 </div>
 <div class="form-row">
   <div class="form-group"><label class="form-label">Client</label>
-    <select id="i-client">
-      <option value="">— Select —</option>
-      ${clients.map(c => `<option value="${c.id}"${inv?.client_id === c.id ? " selected" : ""}>${c.name}</option>`).join("")}
-    </select></div>
+    ${searchPicker("i-client", clients, inv?.client_id, "Search clients…")}</div>
   <div class="form-group"><label class="form-label">Project</label>
-    <select id="i-project">
-      <option value="">— Select —</option>
-      ${projects.map(p => `<option value="${p.id}"${inv?.project_id === p.id ? " selected" : ""}>${p.name}</option>`).join("")}
-    </select></div>
+    ${searchPicker("i-project", projects, inv?.project_id, "Search projects…")}</div>
 </div>
 <div class="form-group"><label class="form-label">Due Date</label>
   <input id="i-due" type="date" value="${inv?.due_date || ""}"/></div>
@@ -480,8 +474,8 @@ function _collectItems() {
 
 window.saveInv = async function(id) {
   const { clients, projects } = STATE.data;
-  const clId = document.getElementById("i-client").value;
-  const prId = document.getElementById("i-project").value;
+  const clId = pickerValue("i-client",  STATE.data.clients)  || "";
+  const prId = pickerValue("i-project", STATE.data.projects) || "";
   const cl   = clients.find(c => c.id === clId);
   const pr   = projects.find(p => p.id === prId);
   const items = _collectItems();
