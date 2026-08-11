@@ -334,12 +334,35 @@ function render() {
   } catch(e) { console.warn("mobileBarParts:", e.message); }
 
   try {
-    root.innerHTML = sidebarHTML() + topBar + drawer + `<div class="main">${content}</div>`;
+    root.innerHTML = sidebarHTML() + `<div class="main">${content}</div>`;
   } catch(e) {
     console.error("sidebar render error:", e.message);
     root.innerHTML = `<div class="main">${content}</div>`;
   }
 
+  // Inject mobile top bar directly into body (outside #app)
+  try {
+    let topBarEl = document.getElementById("mobile-top-bar");
+    if (!topBarEl) {
+      topBarEl = document.createElement("div");
+      topBarEl.id = "mobile-top-bar";
+      document.body.insertBefore(topBarEl, document.body.firstChild);
+    }
+    if (topBar) topBarEl.innerHTML = topBar;
+  } catch(e) { console.warn("topbar inject:", e.message); }
+
+  // Inject mobile drawer into body
+  try {
+    let drawerEl = document.getElementById("mobile-drawer-wrap");
+    if (!drawerEl) {
+      drawerEl = document.createElement("div");
+      drawerEl.id = "mobile-drawer-wrap";
+      document.body.appendChild(drawerEl);
+    }
+    if (drawer) drawerEl.innerHTML = drawer;
+  } catch(e) { console.warn("drawer inject:", e.message); }
+
+  // Inject bottom tabs into body
   try {
     let tabsEl = document.getElementById("mobile-tabs-bar");
     if (!tabsEl) {
