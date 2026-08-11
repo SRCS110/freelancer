@@ -276,6 +276,7 @@ window.mobileTabClick = function(tabId) {
   if (!tab) return;
   STATE.openProject = null;
   window._openClientId = null;
+  window._projFilter = null;   // Projects re-opens on Active
   navigate(tab.direct ? tab.direct : "hub-" + (tab.hub || tab.id));
 };
 

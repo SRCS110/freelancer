@@ -122,3 +122,53 @@ function stopSwirl() {
   }
 }
 
+
+// ============================================================
+//  Searchable picker — type-to-filter replacement for <select>
+//  Renders a text input backed by a native <datalist>, plus a
+//  hidden field holding the resolved record id.
+//
+//    searchPicker("f-project", projects, f?.project_id, "Search projects…")
+//    …then read it back with:
+//    pickerValue("f-project", projects)
+// ============================================================
+window.searchPicker = function(id, items, selectedId, placeholder, labelKey) {
+  const key      = labelKey || "name";
+  const selected = (items || []).find(i => i.id === selectedId);
+  const listId   = id + "-list";
+  return `
+<div style="position:relative">
+  <input id="${id}" list="${listId}" autocomplete="off"
+    value="${selected ? String(selected[key]).replace(/"/g, "&quot;") : ""}"
+    placeholder="${placeholder || "Search…"}"
+    style="padding-left:32px;width:100%"
+    oninput="_pickerTouch('${id}')"/>
+  <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);
+    color:var(--text-muted);font-size:14px;pointer-events:none">⌕</span>
+  <datalist id="${listId}">
+    ${(items || []).map(i =>
+      `<option value="${String(i[key]).replace(/"/g, "&quot;")}"></option>`
+    ).join("")}
+  </datalist>
+</div>`;
+};
+
+// Marks the field as edited so a stale selection isn't silently kept
+window._pickerTouch = function(id) {
+  const el = document.getElementById(id);
+  if (el) el.dataset.touched = "1";
+};
+
+// Resolve the typed text back to a record id (null when blank/no match)
+window.pickerValue = function(id, items, labelKey) {
+  const key = labelKey || "name";
+  const el  = document.getElementById(id);
+  if (!el) return null;
+  const txt = (el.value || "").trim().toLowerCase();
+  if (!txt) return null;
+  const exact = (items || []).find(i => String(i[key]).toLowerCase() === txt);
+  if (exact) return exact.id;
+  // Fall back to a unique partial match so near-misses still resolve
+  const partial = (items || []).filter(i => String(i[key]).toLowerCase().includes(txt));
+  return partial.length === 1 ? partial[0].id : null;
+};
