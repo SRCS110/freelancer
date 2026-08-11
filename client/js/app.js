@@ -196,7 +196,8 @@ function mobileBarParts() {
   const overdueCt   = (STATE.data?.invoices || []).filter(i => i.status === "Overdue").length;
   const activeTab   = MOBILE_TABS.find(t => t.pages.includes(STATE.page))?.id || "workspace";
 
-  const topBar = `<div class="mobile-bar">
+  const isMobile = window.innerWidth <= 640;
+  const topBar = `<div class="mobile-bar" style="${isMobile ? 'display:flex' : ''}">
   <div class="mobile-bar-logo" onclick="navigate('dashboard')">${bizName}</div>
   <div class="mobile-bar-actions">
     <!-- Theme toggle -->
@@ -225,7 +226,7 @@ function mobileBarParts() {
 
 `;
 
-  const bottomTabs = `<div class="mobile-tabs">
+  const bottomTabs = `<div class="mobile-tabs" style="${isMobile ? 'display:flex' : ''}">
   ${MOBILE_TABS.map(tab => {
     const isActive = tab.id === activeTab;
     const hasOverdue = tab.id === "money" && overdueCt > 0;
