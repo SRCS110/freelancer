@@ -183,10 +183,11 @@ function sidebarHTML() {
 // ── Mobile bar + drawer + bottom tabs ────────────────────────
 
 const MOBILE_TABS = [
-  { id: "workspace", icon: "◇", iconActive: "◆", label: "Work",  pages: ["clients"] },
-  { id: "money",     icon: "○", iconActive: "●", label: "Money", pages: ["finances","invoices"] },
-  { id: "tools",     icon: "◻", iconActive: "◼", label: "Tools", pages: ["projects","bookmarks","tech-stack","brainstorm"] },
-  { id: "ops",       icon: "△", iconActive: "▲", label: "Ops",   pages: ["workflows","team","ai"] },
+  // direct: tapping goes straight to the page — no hub in between
+  { id: "clients",  icon: "○", iconActive: "●", label: "Clients",  direct: "clients",  pages: ["clients"] },
+  { id: "money",    icon: "◇", iconActive: "◆", label: "Money",    pages: ["finances","invoices"] },
+  { id: "projects", icon: "◻", iconActive: "◼", label: "Projects", direct: "projects", pages: ["projects"] },
+  { id: "tools",    icon: "△", iconActive: "▲", label: "Tools",    pages: ["bookmarks","tech-stack","brainstorm","workflows","team"] },
 ];
 
 function mobileBarParts() {
@@ -265,10 +266,12 @@ function mobileBarParts() {
 // - If already on that tab's section → show drawer with sub-pages
 // - If not → navigate to first page in that section
 window.mobileTabClick = function(tabId) {
-  // Always land on the section hub — it links to every page in that section
+  const tab = MOBILE_TABS.find(t => t.id === tabId);
+  if (!tab) return;
   STATE.openProject = null;
   window._openClientId = null;
-  navigate("hub-" + tabId);
+  // Core functions go straight to their page; multi-page sections open a hub
+  navigate(tab.direct ? tab.direct : "hub-" + tabId);
 };
 
 // Store which tab filter the drawer is showing
@@ -353,7 +356,8 @@ function render() {
   try {
     const isMobileView = window.innerWidth <= 640;
     const parentTab = MOBILE_TABS.find(t => t.pages.includes(STATE.page));
-    if (isMobileView && parentTab && !STATE.page?.startsWith("hub-")) {
+    // Direct tabs (Clients, Projects) are top-level — no back link needed
+    if (isMobileView && parentTab && !parentTab.direct && !STATE.page?.startsWith("hub-")) {
       backLink = `<div onclick="navigate('hub-${parentTab.id}')"
         style="display:inline-flex;align-items:center;gap:6px;margin-bottom:12px;
                cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:11px;
