@@ -166,7 +166,7 @@ ${bizName}${s.business_email ? "\n" + s.business_email : ""}${s.business_phone ?
   <div style="display:flex;gap:14px;align-items:flex-start;padding:14px;
     background:color-mix(in srgb,var(--accent) 8%,transparent);
     border:1px solid color-mix(in srgb,var(--accent) 25%,transparent);
-    border-radius:4px">
+    border-radius:10px">
     <span style="font-family:'JetBrains Mono',monospace;font-size:18px;color:var(--accent);flex-shrink:0">1</span>
     <div>
       <div style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:var(--text);margin-bottom:2px">
@@ -179,7 +179,7 @@ ${bizName}${s.business_email ? "\n" + s.business_email : ""}${s.business_phone ?
   </div>
 
   <div style="display:flex;gap:14px;align-items:flex-start;padding:14px;
-    background:var(--bg);border:1px solid var(--border);border-radius:4px">
+    background:var(--bg);border:1px solid var(--border);border-radius:10px">
     <span style="font-family:'JetBrains Mono',monospace;font-size:18px;color:var(--text-muted);flex-shrink:0">2</span>
     <div>
       <div style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:var(--text);margin-bottom:2px">

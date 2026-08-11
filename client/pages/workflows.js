@@ -82,7 +82,7 @@ function _templateCardHTML(t) {
   const steps    = (STATE.data.workflow_steps || []).filter(s => s.template_id === t.id);
   const color    = t.color || "#3bf4a3";
   return `
-<div style="background:var(--bg-raised);border:1px solid var(--border);border-left:3px solid ${color};border-radius:4px;padding:18px;cursor:pointer;transition:border-color .15s"
+<div style="background:var(--bg-raised);border:1px solid var(--border);border-left:3px solid ${color};border-radius:10px;padding:18px;cursor:pointer;transition:border-color .15s"
   onclick="openWfTemplate('${t.id}')">
   <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px">
     <div>
@@ -112,7 +112,7 @@ function _runCardHTML(r, dimmed = false) {
   const color     = template?.color || "#3bf4a3";
 
   return `
-<div style="background:var(--bg-raised);border:1px solid var(--border);border-radius:4px;padding:16px;${dimmed?"opacity:.6":""};cursor:pointer;transition:border-color .15s"
+<div style="background:var(--bg-raised);border:1px solid var(--border);border-radius:10px;padding:16px;${dimmed?"opacity:.6":""};cursor:pointer;transition:border-color .15s"
   onclick="openWfRun('${r.id}')">
   <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:${total>0?"10px":"0"}">
     <div style="min-width:0">
@@ -240,7 +240,7 @@ function _runDetailHTML() {
   <div style="display:flex;gap:12px;align-items:flex-start;padding:16px;background:var(--bg-raised);border:1px solid ${s.completed ? color+"33" : "var(--border)"};border-radius:8px;transition:all .2s;opacity:${s.completed?"0.65":"1"}">
     <div style="padding-top:1px;flex-shrink:0">
       <button onclick="toggleStep('${s.id}',${s.completed})"
-        style="width:20px;height:20px;border-radius:4px;border:2px solid ${s.completed ? color : "var(--border)"};background:${s.completed ? color : "transparent"};cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--bg);font-size:11px;font-weight:900;transition:all .15s;flex-shrink:0">
+        style="width:20px;height:20px;border-radius:10px;border:2px solid ${s.completed ? color : "var(--border)"};background:${s.completed ? color : "transparent"};cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--bg);font-size:11px;font-weight:900;transition:all .15s;flex-shrink:0">
         ${s.completed ? "✓" : ""}
       </button>
     </div>
@@ -251,7 +251,7 @@ function _runDetailHTML() {
       ${!s.completed ? `
       <div style="margin-top:8px">
         <input placeholder="add a note…" id="note-${s.id}"
-          style="font-size:11px;padding:5px 8px;background:var(--bg);border-color:var(--border);border-radius:4px"
+          style="font-size:11px;padding:5px 8px;background:var(--bg);border-color:var(--border);border-radius:10px"
           value="${s.notes || ""}"
           onblur="saveStepNote('${s.id}',this.value)"/>
       </div>` : s.notes ? `<div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted);margin-top:4px;font-style:italic">"${s.notes}"</div>` : ""}
@@ -307,7 +307,7 @@ window.openWfTemplateModal = function(id) {
     ${WF_COLORS.map(c => `
     <button onclick="document.getElementById('wt-color').value='${c}';document.querySelectorAll('.wf-color-btn').forEach(b=>b.style.outline='none');this.style.outline='2px solid ${c}'"
       class="wf-color-btn"
-      style="width:24px;height:24px;border-radius:4px;background:${c};border:none;cursor:pointer;outline:${(t?.color||"#3bf4a3")===c?"2px solid "+c:"none"}">
+      style="width:24px;height:24px;border-radius:10px;background:${c};border:none;cursor:pointer;outline:${(t?.color||"#3bf4a3")===c?"2px solid "+c:"none"}">
     </button>`).join("")}
     <input type="hidden" id="wt-color" value="${t?.color||"#3bf4a3"}"/>
   </div>

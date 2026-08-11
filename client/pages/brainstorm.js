@@ -74,7 +74,7 @@ ${notes.length === 0
     </div>`
   : `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
       ${notes.map(n => `
-      <div style="background:var(--bg-raised);border:1px solid var(--border);border-left:3px solid ${n.color || "var(--accent)"};border-radius:4px;padding:18px;cursor:pointer;transition:border-color .15s"
+      <div style="background:var(--bg-raised);border:1px solid var(--border);border-left:3px solid ${n.color || "var(--accent)"};border-radius:10px;padding:18px;cursor:pointer;transition:border-color .15s"
         onclick="openBsNote('${n.id}')">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px">
           <div style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--text)">${n.title}</div>
@@ -87,7 +87,7 @@ ${notes.length === 0
         </div>` : ""}
         <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px">
           ${n.tags ? `<div style="display:flex;gap:4px;flex-wrap:wrap">
-            ${n.tags.split(",").filter(Boolean).map(t => `<span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-muted);background:var(--border);padding:2px 6px;border-radius:3px">${t.trim()}</span>`).join("")}
+            ${n.tags.split(",").filter(Boolean).map(t => `<span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-muted);background:var(--border);padding:2px 6px;border-radius:8px">${t.trim()}</span>`).join("")}
           </div>` : "<span></span>"}
           <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted)">${fmtDate(n.updated_at)}</span>
         </div>
@@ -120,7 +120,7 @@ function _bsEditHTML(id) {
   <div style="margin-bottom:20px">
     <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted);letter-spacing:.6px;text-transform:uppercase;margin-bottom:12px">guided prompts — answer below each one</div>
     ${prompts.map((p, i) => `
-    <div style="padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:4px;margin-bottom:8px">
+    <div style="padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:10px;margin-bottom:8px">
       <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);font-weight:700;margin-bottom:4px">${i + 1}. ${p}</div>
     </div>`).join("")}
   </div>` : ""}

@@ -44,7 +44,7 @@ ${clients.length === 0
         const projects = (STATE.data.projects || []).filter(p => p.client_id === c.id);
         const docs     = (STATE.data.client_documents || []).filter(d => d.client_id === c.id);
         return `
-        <div style="background:var(--bg-raised);border:1px solid var(--border);border-radius:4px;padding:18px;cursor:pointer;transition:border-color .15s"
+        <div style="background:var(--bg-raised);border:1px solid var(--border);border-radius:10px;padding:18px;cursor:pointer;transition:border-color .15s"
           onclick="openClientFile('${c.id}')"
           onmouseover="this.style.borderColor='color-mix(in srgb,var(--accent) 40%,transparent)'"
           onmouseout="this.style.borderColor='var(--border)'">
@@ -90,7 +90,7 @@ window.renderClientSearch = function(q) {
     const projects = (STATE.data.projects || []).filter(p => p.client_id === c.id);
     const docs     = (STATE.data.client_documents || []).filter(d => d.client_id === c.id);
     return `
-    <div style="background:var(--bg-raised);border:1px solid var(--border);border-radius:4px;padding:18px;cursor:pointer;transition:border-color .15s"
+    <div style="background:var(--bg-raised);border:1px solid var(--border);border-radius:10px;padding:18px;cursor:pointer;transition:border-color .15s"
       onclick="openClientFile('${c.id}')"
       onmouseover="this.style.borderColor='color-mix(in srgb,var(--accent) 40%,transparent)'"
       onmouseout="this.style.borderColor='var(--border)'">
@@ -223,7 +223,7 @@ function clientFileHTML(id) {
       </div>`
     : `<div style="display:flex;flex-direction:column;gap:8px">
         ${docs.map(d => `
-        <div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:4px">
+        <div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:10px">
           <span style="font-family:'JetBrains Mono',monospace;font-size:18px;flex-shrink:0">${_docIcon(d.type)}</span>
           <div style="flex:1;min-width:0">
             <div style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--text)">${d.name}</div>

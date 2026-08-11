@@ -49,7 +49,7 @@ function userSettingsHTML() {
 <!-- Business Plan quick link -->
 <div style="display:flex;align-items:center;justify-content:space-between;
   padding:16px 20px;background:var(--bg-raised);border:1px solid var(--border);
-  border-radius:4px;margin-bottom:20px;cursor:pointer;transition:border-color .15s"
+  border-radius:10px;margin-bottom:20px;cursor:pointer;transition:border-color .15s"
   onclick="navigate('business-plan')"
   onmouseover="this.style.borderColor='color-mix(in srgb,var(--accent) 40%,transparent)'"
   onmouseout="this.style.borderColor='var(--border)'">
@@ -185,8 +185,8 @@ function userSettingsHTML() {
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
       <div style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--text)">Credential PIN</div>
       ${hasPinSet()
-        ? `<span style="font-size:10px;color:var(--accent);font-weight:700;background:color-mix(in srgb,var(--accent) 12%,transparent);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);padding:2px 8px;border-radius:3px;font-family:'JetBrains Mono',monospace">SET</span>`
-        : `<span style="font-size:10px;color:var(--danger);font-weight:700;background:color-mix(in srgb,var(--danger) 10%,transparent);border:1px solid color-mix(in srgb,var(--danger) 30%,transparent);padding:2px 8px;border-radius:3px;font-family:'JetBrains Mono',monospace">NOT SET</span>`}
+        ? `<span style="font-size:10px;color:var(--accent);font-weight:700;background:color-mix(in srgb,var(--accent) 12%,transparent);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);padding:2px 8px;border-radius:8px;font-family:'JetBrains Mono',monospace">SET</span>`
+        : `<span style="font-size:10px;color:var(--danger);font-weight:700;background:color-mix(in srgb,var(--danger) 10%,transparent);border:1px solid color-mix(in srgb,var(--danger) 30%,transparent);padding:2px 8px;border-radius:8px;font-family:'JetBrains Mono',monospace">NOT SET</span>`}
     </div>
     <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted);margin-bottom:12px;line-height:1.6">
       ${hasPinSet()

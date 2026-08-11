@@ -317,7 +317,7 @@ function _todoRow(t, pid) {
   <!-- Checkbox + title -->
   <div style="display:flex;align-items:center;gap:10px;min-width:0">
     <button onclick="toggleTodo('${t.id}',${t.completed})"
-      style="width:16px;height:16px;flex-shrink:0;border-radius:3px;
+      style="width:16px;height:16px;flex-shrink:0;border-radius:8px;
              border:1.5px solid ${t.completed ? "var(--accent)" : "var(--border-2)"};
              background:${t.completed ? "var(--accent)" : "transparent"};
              cursor:pointer;display:flex;align-items:center;justify-content:center;
@@ -335,7 +335,7 @@ function _todoRow(t, pid) {
   <!-- Assignee -->
   <div class="todo-col-assignee" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted);
     display:flex;align-items:center;padding-right:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-    ${t.assignee ? `<span style="background:var(--accent-l,color-mix(in srgb,var(--accent) 15%,transparent));color:var(--accent);padding:2px 6px;border-radius:3px;font-size:10px">${t.assignee}</span>` : `<span style="color:var(--border-2)">—</span>`}
+    ${t.assignee ? `<span style="background:var(--accent-l,color-mix(in srgb,var(--accent) 15%,transparent));color:var(--accent);padding:2px 6px;border-radius:8px;font-size:10px">${t.assignee}</span>` : `<span style="color:var(--border-2)">—</span>`}
   </div>
 
   <!-- Due date -->
@@ -355,14 +355,14 @@ function _todoRow(t, pid) {
   <!-- Actions — always visible -->
   <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">
     <button onclick="editTodo('${t.id}')"
-      style="background:none;border:1px solid var(--border);border-radius:3px;
+      style="background:none;border:1px solid var(--border);border-radius:8px;
              color:var(--text-muted);font-size:11px;cursor:pointer;padding:2px 6px;
              font-family:'JetBrains Mono',monospace;line-height:1.4;transition:all .12s"
       onmouseover="this.style.color='var(--accent)';this.style.borderColor='var(--accent)'"
       onmouseout="this.style.color='var(--text-muted)';this.style.borderColor='var(--border)'"
       title="edit task">edit</button>
     <button onclick="deleteTodo('${t.id}')"
-      style="background:none;border:1px solid var(--border);border-radius:3px;
+      style="background:none;border:1px solid var(--border);border-radius:8px;
              color:var(--text-muted);font-size:12px;cursor:pointer;padding:2px 5px;
              line-height:1.4;transition:all .12s"
       onmouseover="this.style.color='var(--danger)';this.style.borderColor='var(--danger)'"
@@ -420,7 +420,7 @@ function _todoListHTML(pid) {
         <div style="flex:1"></div>
         <button onclick="event.stopPropagation();openTodoInput('${pid}','${sec.id}')"
           style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted);
-          background:none;border:none;cursor:pointer;padding:2px 6px;border-radius:3px"
+          background:none;border:none;cursor:pointer;padding:2px 6px;border-radius:8px"
           onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">+ task</button>
         <button onclick="event.stopPropagation();deleteSection('${sec.id}')"
           style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--border-2);

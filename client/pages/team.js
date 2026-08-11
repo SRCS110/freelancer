@@ -84,7 +84,7 @@ function _teamDashboardHTML(team, members, invites) {
         <td>
           <span style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;
             color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent);
-            padding:2px 8px;border-radius:3px;text-transform:uppercase">owner</span>
+            padding:2px 8px;border-radius:8px;text-transform:uppercase">owner</span>
         </td>
         <td style="color:var(--text-muted);font-family:'JetBrains Mono',monospace;font-size:11px">
           ${fmtDate(team.created_at)}
@@ -99,11 +99,11 @@ function _teamDashboardHTML(team, members, invites) {
         <td>
           ${canManage
             ? `<select onchange="changeRole('${m.id}',this.value)"
-                style="font-family:'JetBrains Mono',monospace;font-size:11px;padding:4px 6px;width:auto;border-radius:3px">
+                style="font-family:'JetBrains Mono',monospace;font-size:11px;padding:4px 6px;width:auto;border-radius:8px">
                 ${ROLES.map(r => `<option value="${r}"${m.role===r?" selected":""}>${r}</option>`).join("")}
               </select>`
             : `<span style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;
-                color:var(--text-muted);background:var(--border);padding:2px 8px;border-radius:3px;text-transform:uppercase">${m.role}</span>`}
+                color:var(--text-muted);background:var(--border);padding:2px 8px;border-radius:8px;text-transform:uppercase">${m.role}</span>`}
         </td>
         <td style="color:var(--text-muted);font-family:'JetBrains Mono',monospace;font-size:11px">
           ${fmtDate(m.created_at)}
@@ -150,13 +150,13 @@ ${invites.length > 0 ? `
     <div style="display:flex;gap:12px;align-items:flex-start">
       <span style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;
         color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent);
-        padding:2px 8px;border-radius:3px;text-transform:uppercase;flex-shrink:0;margin-top:2px">${role}</span>
+        padding:2px 8px;border-radius:8px;text-transform:uppercase;flex-shrink:0;margin-top:2px">${role}</span>
       <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted);line-height:1.5">${desc}</span>
     </div>`).join("")}
     <div style="display:flex;gap:12px;align-items:flex-start">
       <span style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;
         color:var(--text);background:var(--border);
-        padding:2px 8px;border-radius:3px;text-transform:uppercase;flex-shrink:0;margin-top:2px">owner</span>
+        padding:2px 8px;border-radius:8px;text-transform:uppercase;flex-shrink:0;margin-top:2px">owner</span>
       <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted);line-height:1.5">Full access — can delete the team, transfer ownership, and manage all billing</span>
     </div>
   </div>
@@ -201,7 +201,7 @@ window.openInviteModal = function() {
     ${ROLES.map(r => `<option value="${r}"${r==="editor"?" selected":""}>${r} — ${ROLE_DESC[r]}</option>`).join("")}
   </select>
 </div>
-<div style="padding:10px 14px;background:var(--bg);border-radius:4px;border:1px solid var(--border);
+<div style="padding:10px 14px;background:var(--bg);border-radius:10px;border:1px solid var(--border);
   font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted);line-height:1.6;margin-bottom:4px">
   An email with a secure invite link will be sent. The link expires in 7 days.
 </div>

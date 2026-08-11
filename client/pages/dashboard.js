@@ -64,7 +64,7 @@ function dashboardHTML() {
 </div>
 
 ${overdue > 0 ? `
-<div style="margin-bottom:20px;padding:10px 16px;background:color-mix(in srgb,var(--danger) 8%,transparent);border:1px solid color-mix(in srgb,var(--danger) 25%,transparent);border-radius:4px;font-size:13px;color:var(--danger);display:flex;align-items:center;gap:8px">
+<div style="margin-bottom:20px;padding:10px 16px;background:color-mix(in srgb,var(--danger) 8%,transparent);border:1px solid color-mix(in srgb,var(--danger) 25%,transparent);border-radius:10px;font-size:13px;color:var(--danger);display:flex;align-items:center;gap:8px">
   ! <strong>${overdue} overdue invoice${overdue !== 1 ? "s" : ""}</strong> — follow up with clients before the balance grows.
   <button class="btn btn-ghost btn-sm" style="margin-left:auto;color:#f43f5e;border-color:#f43f5e44;font-size:11px" onclick="navigate('invoices')">View →</button>
 </div>` : ""}

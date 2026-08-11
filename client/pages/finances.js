@@ -114,7 +114,7 @@ function financesHTML() {
     <div class="section-title" style="margin-bottom:14px">By Tax Category</div>
     <div style="display:flex;flex-direction:column;gap:8px">
       ${catTotals.map(({ cat, income, expense, net }) => `
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--bg);border-radius:4px;border:1px solid var(--border)">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--bg);border-radius:10px;border:1px solid var(--border)">
         <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-muted)">${cat}</span>
         <div style="display:flex;gap:12px;align-items:center">
           ${income > 0  ? `<span style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:var(--accent)">+${usd(income)}</span>`  : ""}

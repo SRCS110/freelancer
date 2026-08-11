@@ -70,7 +70,7 @@ function _bookmarkCard(b) {
   ${b.description ? `<div style="font-size:11px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;line-height:1.5">${b.description}</div>` : ""}
 
   ${hasCreds ? `
-  <div style="padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:4px;display:flex;flex-direction:column;gap:6px">
+  <div style="padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:10px;display:flex;flex-direction:column;gap:6px">
     <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted);letter-spacing:.5px;text-transform:uppercase;margin-bottom:2px">
       credentials <span style="color:var(--accent);font-size:9px">◆ pin protected</span>
     </div>
