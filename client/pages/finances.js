@@ -129,9 +129,10 @@ ${(() => {
 
 <div class="fin-summary">
   ${[
-    { label: "Total Income",    val: income,          color: "#10b981", icon: "📈" },
-    { label: "Total Expenses",  val: expenses,        color: "#f43f5e", icon: "📉" },
-    { label: "Net Profit",      val: income - expenses, color: (income - expenses) >= 0 ? "#6366f1" : "#f43f5e", icon: "◫" },
+    { label: "Total Income",   val: income,   color: "var(--accent)", icon: "📈" },
+    { label: "Total Expenses", val: expenses, color: "var(--danger)", icon: "📉" },
+    { label: "Net Profit",     val: income - expenses,
+      color: (income - expenses) >= 0 ? "var(--text)" : "var(--danger)", icon: "◫" },
   ].map(s => `
   <div class="card">
     <div style="font-size:22px;margin-bottom:8px">${s.icon}</div>
@@ -139,6 +140,14 @@ ${(() => {
     <div class="card-value" style="color:${s.color}">${usd(s.val)}</div>
     <div class="card-sub">${PERIOD_LABELS[period]}</div>
   </div>`).join("")}
+
+  <!-- Tax estimate joins the summary grid on mobile -->
+  <div class="card mobile-only-card">
+    <div style="font-size:22px;margin-bottom:8px">◇</div>
+    <div class="card-label">Est. Tax (${STATE.data.user_settings?.tax_rate ?? 25}%)</div>
+    <div class="card-value" style="color:var(--warning)">${usd(tax)}</div>
+    <div class="card-sub">Set aside</div>
+  </div>
 </div>
 
 <div class="grid-2" style="margin-bottom:24px">

@@ -151,7 +151,7 @@ function projectFileHTML(p) {
 
   <!-- Inline add row (hidden) — at TOP so new tasks appear above existing ones -->
   <div id="todo-input-${p.id}" style="display:none;padding:10px 20px;background:var(--bg);border-bottom:1px solid var(--border)">
-    <div style="display:grid;grid-template-columns:1fr 110px 110px 80px auto;gap:8px;align-items:center">
+    <div class="todo-add-row" style="display:grid;grid-template-columns:1fr 110px 110px 80px auto;gap:8px;align-items:center">
       <input id="todo-text-${p.id}" placeholder="Task name…" style="font-size:13px"
         onkeydown="if(event.key==='Enter')saveTodo('${p.id}',null);if(event.key==='Escape')closeTodoInput('${p.id}')"/>
       <input id="todo-assignee-${p.id}" placeholder="Name" style="font-size:11px"/>
