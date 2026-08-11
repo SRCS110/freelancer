@@ -352,7 +352,10 @@ button { font-family: 'Inter', sans-serif; cursor: pointer; border: none; border
   justify-content: space-between;
   padding: 0 16px;
   z-index: 1000;
-  -webkit-backdrop-filter: blur(8px);
+  background: color-mix(in srgb, var(--bg) 78%, transparent);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
 }
 .mobile-bar-logo {
   font-family: 'JetBrains Mono', monospace;
@@ -387,44 +390,50 @@ button { font-family: 'Inter', sans-serif; cursor: pointer; border: none; border
 .mobile-tabs {
   display: none;
   position: fixed;
-  bottom: 0; left: 0; right: 0;
-  height: 64px;
-  background: var(--bg);
-  border-top: 1px solid var(--border);
+  left: 12px; right: 12px;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  height: 62px;
   z-index: 1000;
-  padding: 0 8px;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding: 0 4px;
   align-items: center;
   justify-content: space-around;
-  -webkit-backdrop-filter: blur(8px);
+
+  /* Floating translucent pill */
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--bg) 72%, transparent);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  box-shadow: 0 6px 24px rgba(0,0,0,.16), 0 1px 2px rgba(0,0,0,.08);
 }
 .mobile-tab {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3px;
+  gap: 4px;
   flex: 1;
   height: 100%;
   cursor: pointer;
   color: var(--text-muted);
-  transition: color .15s;
-  padding: 8px 4px;
-  border-radius: 8px;
+  transition: color .15s, transform .12s;
+  -webkit-tap-highlight-color: transparent;
+  border-radius: 14px;
 }
 .mobile-tab.active { color: var(--accent); }
-.mobile-tab:active { opacity: .7; }
+.mobile-tab:active { transform: scale(.9); }
 .mobile-tab-icon {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 18px;
+  font-size: 19px;
   line-height: 1;
 }
 .mobile-tab-label {
   font-family: 'JetBrains Mono', monospace;
   font-size: 9px;
-  font-weight: 600;
-  letter-spacing: .3px;
+  font-weight: 700;
+  letter-spacing: .4px;
   text-transform: uppercase;
+  line-height: 1;
 }
 
 /* Hamburger kept for drawer */
@@ -527,18 +536,22 @@ button { font-family: 'Inter', sans-serif; cursor: pointer; border: none; border
   .mobile-tabs { display: flex !important; }
   #mobile-tabs-bar .mobile-tabs { display: flex !important; }
   .sidebar { display: none !important; }
-  .main { padding: 16px; padding-top: 68px; padding-bottom: 80px; }
+  .main { padding: 16px; padding-top: 68px; padding-bottom: 96px; }
 
-  /* Project todo — collapse to simpler mobile layout */
-  .todo-grid-row {
-    grid-template-columns: 1fr auto !important;
+  /* Project todo — collapse to task + actions only */
+  .todo-row {
+    grid-template-columns: minmax(0,1fr) auto !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+    column-gap: 8px !important;
   }
+  .todo-head { display: none !important; }
   .todo-col-assignee,
   .todo-col-due,
-  .todo-col-priority,
-  .todo-col-header-assignee,
-  .todo-col-header-due,
-  .todo-col-header-priority { display: none !important; }
+  .todo-col-priority { display: none !important; }
+
+  /* Card can scroll horizontally if anything overflows */
+  .card { overflow-x: auto; }
 
   /* Project file body — single column */
   .pf-body { grid-template-columns: 1fr !important; }
@@ -587,4 +600,5 @@ button { font-family: 'Inter', sans-serif; cursor: pointer; border: none; border
   .overdue-banner { font-size: 11px; flex-wrap: wrap; }
 }
 
-#mobile-tabs-bar { position: fixed; bottom: 0; left: 0; right: 0; z-index: 1000; }
+/* Wrapper is a passthrough — the .mobile-tabs pill positions itself */
+#mobile-tabs-bar { position: static; }
