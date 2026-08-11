@@ -183,11 +183,13 @@ function sidebarHTML() {
 // ── Mobile bar + drawer + bottom tabs ────────────────────────
 
 const MOBILE_TABS = [
-  // direct: tapping goes straight to the page — no hub in between
+  // direct: straight to a page.  hub: opens a hub id from HUB_CONFIG.
   { id: "clients",  icon: "○", iconActive: "●", label: "Clients",  direct: "clients",  pages: ["clients"] },
-  { id: "money",    icon: "◇", iconActive: "◆", label: "Money",    pages: ["finances","invoices"] },
+  { id: "money",    icon: "◇", iconActive: "◆", label: "Money",    direct: "finances", pages: ["finances","invoices"] },
   { id: "projects", icon: "◻", iconActive: "◼", label: "Projects", direct: "projects", pages: ["projects"] },
-  { id: "tools",    icon: "△", iconActive: "▲", label: "Tools",    pages: ["bookmarks","tech-stack","brainstorm","workflows","team"] },
+  // Overview is home — its tile grid reaches every remaining page
+  { id: "overview", icon: "△", iconActive: "▲", label: "Overview", hub: "workspace",
+    pages: ["bookmarks","tech-stack","brainstorm","workflows","team","business-plan","settings"] },
 ];
 
 function mobileBarParts() {
@@ -195,11 +197,15 @@ function mobileBarParts() {
   const bizName     = s?.business_name || STATE.data?.business_plan?.business_name || "Freelancer";
   const isLight     = _isLight();
   const overdueCt   = (STATE.data?.invoices || []).filter(i => i.status === "Overdue").length;
-  const activeTab   = STATE.page?.startsWith("hub-")
-    ? STATE.page.slice(4)
-    : STATE.page === "dashboard"
-      ? "workspace"
-      : (MOBILE_TABS.find(t => t.pages.includes(STATE.page))?.id || "workspace");
+  const activeTab   = (() => {
+    const pg = STATE.page || "";
+    if (pg.startsWith("hub-")) {
+      const hubId = pg.slice(4);
+      return MOBILE_TABS.find(t => (t.hub || t.id) === hubId)?.id || "overview";
+    }
+    if (pg === "dashboard") return "overview";
+    return MOBILE_TABS.find(t => t.pages.includes(pg))?.id || "overview";
+  })();
 
   const isMobile = window.innerWidth <= 640;
   const topBar = `<div class="mobile-bar" style="${isMobile ? 'display:flex' : ''}">
@@ -270,8 +276,7 @@ window.mobileTabClick = function(tabId) {
   if (!tab) return;
   STATE.openProject = null;
   window._openClientId = null;
-  // Core functions go straight to their page; multi-page sections open a hub
-  navigate(tab.direct ? tab.direct : "hub-" + tabId);
+  navigate(tab.direct ? tab.direct : "hub-" + (tab.hub || tab.id));
 };
 
 // Store which tab filter the drawer is showing
@@ -356,12 +361,20 @@ function render() {
   try {
     const isMobileView = window.innerWidth <= 640;
     const parentTab = MOBILE_TABS.find(t => t.pages.includes(STATE.page));
-    // Direct tabs (Clients, Projects) are top-level — no back link needed
-    if (isMobileView && parentTab && !parentTab.direct && !STATE.page?.startsWith("hub-")) {
-      backLink = `<div onclick="navigate('hub-${parentTab.id}')"
-        style="display:inline-flex;align-items:center;gap:6px;margin-bottom:12px;
-               cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:11px;
-               color:var(--text-muted)">← ${parentTab.label}</div>`;
+    const onHub     = STATE.page?.startsWith("hub-");
+    if (isMobileView && parentTab && !onHub) {
+      // Direct tab: only sub-pages get a back link, pointing at the landing page
+      const isLanding = parentTab.direct && STATE.page === parentTab.direct;
+      if (!isLanding) {
+        const dest  = parentTab.direct ? parentTab.direct : "hub-" + (parentTab.hub || parentTab.id);
+        const label = parentTab.direct
+          ? parentTab.direct.charAt(0).toUpperCase() + parentTab.direct.slice(1)
+          : parentTab.label;
+        backLink = `<div onclick="navigate('${dest}')"
+          style="display:inline-flex;align-items:center;gap:6px;margin-bottom:12px;
+                 cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:11px;
+                 color:var(--text-muted)">← ${label}</div>`;
+      }
     }
   } catch(e) { console.warn("backlink:", e.message); }
 
