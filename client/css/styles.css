@@ -849,9 +849,80 @@ hr, .divider { border-color: var(--border); }
 }
 
 /* ── Tax estimate rides with the finance summary on mobile ──── */
+/* Desktop: the full tax card lives in the 2-up grid, tile hidden */
+.mobile-only-card { display: none; }
+
 @media (max-width: 640px) {
+  /* Mobile: show the compact tile inside .fin-summary,
+     hide the full card so the number isn't stated twice */
+  .mobile-only-card { display: block !important; }
+  .fin-tax-card     { display: none !important; }
   .grid-2 { display: flex !important; flex-direction: column; gap: 12px !important; }
-  .fin-tax-card { order: -1; }          /* above By Tax Category */
-  .fin-tax-card .section-title { font-size: 12px; }
-  .fin-tax-card > div { margin-bottom: 8px !important; }
+}
+
+/* ==========================================================================
+   MOBILE OVERLAY FIXES
+   The floating tab bar sits at z-index 1000, so anything that must appear
+   above it needs to clear that, and anything that scrolls needs to clear
+   the bar's physical footprint.
+   ========================================================================== */
+
+/* Modals must sit above the tab bar, not behind it */
+.modal-overlay { z-index: 1200 !important; }
+
+@media (max-width: 640px) {
+  /* Full-height sheet with room for the browser chrome */
+  .modal-overlay {
+    padding: 0 !important;
+    align-items: flex-end !important;
+  }
+  .modal {
+    max-width: 100% !important;
+    max-height: 92vh !important;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0 !important;
+    border-bottom: none !important;
+    padding: 20px 16px 0 !important;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Header pinned so the close button is always reachable */
+  .modal-header {
+    position: sticky; top: 0; z-index: 2;
+    background: var(--bg-raised);
+    padding: 4px 0 12px;
+    margin-bottom: 12px !important;
+    border-bottom: 1px solid var(--border);
+  }
+  .modal-close { font-size: 26px; padding: 4px 8px; margin: -4px -8px; }
+
+  /* Actions pinned to the bottom, clear of the tab bar and home indicator */
+  .modal-actions {
+    position: sticky; bottom: 0; z-index: 2;
+    background: var(--bg-raised);
+    margin-top: 20px !important;
+    padding: 14px 0 calc(16px + env(safe-area-inset-bottom, 0px)) !important;
+    border-top: 1px solid var(--border);
+  }
+  .modal-actions .btn { flex: 1; padding: 12px 14px; }
+
+  /* Stop iOS zooming the page when a field takes focus */
+  .modal input, .modal select, .modal textarea { font-size: 16px !important; }
+
+  /* Task add row stacks instead of running off-screen */
+  .todo-add-row {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+  .todo-add-row input,
+  .todo-add-row select { font-size: 16px !important; width: 100%; }
+  .todo-add-row .btn-row { display: flex; gap: 8px; }
+  .todo-add-row .btn-row .btn {
+    flex: 1;
+    font-size: 13px !important;   /* 10px was under the tap-target floor */
+    padding: 11px 14px !important;
+  }
+
+  /* Cards no longer scroll sideways — content wraps instead */
+  .card { overflow-x: visible !important; }
 }
