@@ -847,3 +847,11 @@ hr, .divider { border-color: var(--border); }
   .page-section-header .btn-primary { width: 100%; }
   .page-title { font-size: 24px !important; }
 }
+
+/* ── Tax estimate rides with the finance summary on mobile ──── */
+@media (max-width: 640px) {
+  .grid-2 { display: flex !important; flex-direction: column; gap: 12px !important; }
+  .fin-tax-card { order: -1; }          /* above By Tax Category */
+  .fin-tax-card .section-title { font-size: 12px; }
+  .fin-tax-card > div { margin-bottom: 8px !important; }
+}
