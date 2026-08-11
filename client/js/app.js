@@ -217,14 +217,27 @@ function mobileBarParts() {
 
 `;
 
+  const drawerNavHTML = NAV_GROUPS.map(group => `
+  <div class="nav-group">
+    <div class="nav-group-label">${group.label}</div>
+    ${group.items.map(n => `
+    <div class="nav-item${STATE.page === n.id ? " active" : ""}" onclick="drawerNavigate('${n.id}')">
+      <span class="nav-icon">${n.icon}</span>
+      <span>${n.label}</span>
+      ${n.id === "invoices" && overdueCt > 0
+        ? `<span class="nav-badge">${overdueCt}</span>` : ""}
+    </div>`).join("")}
+  </div>`).join("") + `
+  <div style="margin-top:auto;padding:16px 20px;border-top:1px solid var(--border)">
+    <button class="logout-btn" onclick="doSignOut()">sign out</button>
+  </div>`;
+
   const drawer = `<div class="mobile-drawer" id="mobile-drawer" onclick="closeDrawerOnBackdrop(event)">
   <div class="mobile-drawer-backdrop"></div>
   <div class="mobile-drawer-panel">
-    ${_drawerNav()}
+    ${drawerNavHTML}
   </div>
-</div>
-
-`;
+</div>`;
 
   const bottomTabs = `<div class="mobile-tabs" style="${isMobile ? 'display:flex' : ''}">
   ${MOBILE_TABS.map(tab => {
