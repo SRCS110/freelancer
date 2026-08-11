@@ -9,27 +9,8 @@ const HUB_CONFIG = {
   // Reached from the logo / dashboard route — the mobile overview
   workspace: {
     title: "Overview",
-    sub:   "Your business at a glance",
+    sub:   "Everything in one place",
     pages: [],
-  },
-  money: {
-    title: "Money",
-    sub:   "Income, expenses and invoicing",
-    pages: [
-      { id: "finances", label: "Finances", icon: "◇", desc: "Income, expenses and tax" },
-      { id: "invoices", label: "Invoices", icon: "◻", desc: "Create, send and track invoices" },
-    ],
-  },
-  tools: {
-    title: "Tools",
-    sub:   "Everything else",
-    pages: [
-      { id: "bookmarks",  label: "Bookmarks",  icon: "◉", desc: "Saved links and credentials" },
-      { id: "tech-stack", label: "Tech Stack", icon: "◳", desc: "Recurring subscriptions" },
-      { id: "brainstorm", label: "Brainstorm", icon: "◆", desc: "Notes and guided sessions" },
-      { id: "workflows",  label: "Workflows",  icon: "◳", desc: "SOP templates and live runs" },
-      { id: "team",       label: "Team",       icon: "◎", desc: "Members and invites" },
-    ],
   },
 };
 
@@ -172,6 +153,13 @@ function _workspaceSnapshot() {
     { page: "workflows",  icon: "◳", label: "Workflows", badge: `${runs.length} active` },
     { page: "brainstorm", icon: "◆", label: "Notes",     badge: `${notes.length}` },
     { page: "team",       icon: "◎", label: "Team",      badge: `${(d.team_members || []).length || 1}` },
+    { page: "business-plan", icon: "◈", label: "Plan",
+      badge: d.business_plan?.mission ? "set" : "empty",
+      badgeColor: d.business_plan?.mission ? "var(--accent)" : "var(--text-muted)" },
+    { page: "settings",   icon: "⚙", label: "Settings",  badge: "" },
+    { page: "ai",         icon: "✦", label: "AI",
+      badge: localStorage.getItem("fh_ai_key") ? "ready" : "connect",
+      badgeColor: localStorage.getItem("fh_ai_key") ? "var(--accent)" : "var(--text-muted)" },
   ]);
 
   // ── Rows ────────────────────────────────────────────────────
@@ -253,110 +241,8 @@ function _workspaceSnapshot() {
     + _hubCard("Upcoming renewals",   renewalRows, "No recurring subscriptions tracked.",      "tech-stack");
 }
 
-function _moneySnapshot() {
-  const d        = STATE.data || {};
-  const finances = d.finances || [];
-  const invoices = d.invoices || [];
-  const month    = new Date().toISOString().slice(0, 7);
-
-  const income  = finances.filter(f => f.type === "income"  && f.date?.startsWith(month))
-                          .reduce((a, f) => a + Number(f.amount), 0);
-  const expense = finances.filter(f => f.type === "expense" && f.date?.startsWith(month))
-                          .reduce((a, f) => a + Number(f.amount), 0);
-  const open    = invoices.filter(i => ["Draft", "Sent", "Overdue"].includes(i.status));
-  const overdue = invoices.filter(i => i.status === "Overdue");
-
-  const stats = `
-  <div style="display:flex;gap:8px;margin-bottom:14px">
-    ${_hubStat("Income (mo)",  usd(income),  "var(--accent)")}
-    ${_hubStat("Expenses (mo)", usd(expense), "var(--danger)")}
-    ${_hubStat("Net (mo)", usd(income - expense))}
-  </div>`;
-
-  const statusColor = s =>
-    s === "Overdue" ? "var(--danger)" :
-    s === "Sent"    ? "var(--accent)" : "var(--text-muted)";
-
-  const invRows = open.slice(0, 5).map(i =>
-    _hubRow(
-      `${i.invoice_number} · ${usd(i.amount)}`,
-      i.client_name || "",
-      `navigate('invoices')`,
-      `<span style="font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;
-        flex-shrink:0;color:${statusColor(i.status)}">${i.status.toUpperCase()}</span>`
-    )
-  ).join("");
-
-  const recentRows = finances.slice(0, 4).map(f =>
-    _hubRow(f.description || f.category || "Entry", fmtDate(f.date), `navigate('finances')`,
-      `<span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;
-        flex-shrink:0;color:${f.type === "income" ? "var(--accent)" : "var(--danger)"}">
-        ${f.type === "income" ? "+" : "-"}${usd(f.amount)}</span>`)
-  ).join("");
-
-  const alert = overdue.length ? `
-  <div onclick="navigate('invoices')"
-    style="padding:11px 13px;margin-bottom:14px;border-radius:6px;cursor:pointer;
-      background:color-mix(in srgb,var(--danger) 10%,transparent);
-      border:1px solid color-mix(in srgb,var(--danger) 30%,transparent);
-      font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--danger)">
-    ${overdue.length} overdue invoice${overdue.length !== 1 ? "s" : ""} ·
-    ${usd(overdue.reduce((a, i) => a + Number(i.amount), 0))} outstanding →
-  </div>` : "";
-
-  return alert + stats
-    + _hubCard("Open invoices", invRows, "No open invoices. Everything is settled.", "invoices")
-    + _hubCard("Recent entries", recentRows, "No finance entries yet.", "finances");
-}
-
-function _toolsSnapshot() {
-  const d       = STATE.data || {};
-  const stack   = d.tech_stack || [];
-  const marks   = d.bookmarks  || [];
-  const notes   = d.brainstorm || [];
-  const runs    = (d.workflow_runs || []).filter(r => r.status === "active");
-  const members = d.team_members || [];
-  const monthly = stack.filter(t => t.cycle === "monthly")
-                       .reduce((a, t) => a + Number(t.amount || 0), 0);
-
-  const stats = `
-  <div style="display:flex;gap:8px;margin-bottom:14px">
-    ${_hubStat("Monthly burn", usd(monthly), "var(--danger)")}
-    ${_hubStat("Active runs", runs.length, "var(--accent)")}
-    ${_hubStat("Bookmarks", marks.length)}
-  </div>`;
-
-  const linkRows = marks.filter(b => b.url).slice(0, 5).map(b =>
-    _hubRow(b.name, b.url.replace(/^https?:\/\//, "").split("/")[0],
-      `window.open('${b.url}','_blank')`,
-      `<span style="font-family:'JetBrains Mono',monospace;font-size:11px;
-        color:var(--text-muted);flex-shrink:0">↗</span>`)
-  ).join("");
-
-  const renewals = stack
-    .filter(t => t.renewal_date && t.cycle !== "one-time")
-    .sort((a, b) => a.renewal_date < b.renewal_date ? -1 : 1)
-    .slice(0, 4)
-    .map(t => _hubRow(t.name, `${t.cycle} · renews ${fmtDate(t.renewal_date)}`,
-      `navigate('tech-stack')`,
-      `<span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;
-        color:var(--text);flex-shrink:0">${usd(t.amount)}</span>`))
-    .join("");
-
-  const runRows = runs.slice(0, 4).map(r =>
-    _hubRow(r.name, r.client_name || "", `navigate('workflows')`, "")
-  ).join("");
-
-  return stats
-    + _hubCard("Quick links", linkRows, "No bookmarks with links yet.", "bookmarks")
-    + _hubCard("Active workflow runs", runRows, "No active runs. Start one from a template.", "workflows")
-    + _hubCard("Upcoming renewals", renewals, "No recurring subscriptions tracked.", "tech-stack");
-}
-
 const HUB_SNAPSHOTS = {
   workspace: _workspaceSnapshot,
-  money:     _moneySnapshot,
-  tools:     _toolsSnapshot,
 };
 
 // ── Main hub renderer ─────────────────────────────────────────

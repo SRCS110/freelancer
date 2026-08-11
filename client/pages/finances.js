@@ -87,6 +87,39 @@ function financesHTML() {
   <button class="btn btn-primary" onclick="openFinModal(null)">+ Add Entry</button>
 </div>
 
+<!-- Invoices shortcut — mobile only (desktop has the sidebar) -->
+${(() => {
+  const invs    = STATE.data.invoices || [];
+  const open    = invs.filter(i => ["Draft","Sent","Overdue"].includes(i.status));
+  const overdue = invs.filter(i => i.status === "Overdue");
+  const total   = open.reduce((a, i) => a + Number(i.amount), 0);
+  const alertOn = overdue.length > 0;
+  return `
+  <div class="mobile-only" onclick="navigate('invoices')"
+    style="display:flex;align-items:center;gap:14px;padding:16px;margin-bottom:16px;
+      cursor:pointer;border-radius:var(--radius);
+      background:${alertOn
+        ? "color-mix(in srgb,var(--danger) 9%,transparent)"
+        : "var(--bg-raised)"};
+      border:1px solid ${alertOn
+        ? "color-mix(in srgb,var(--danger) 30%,transparent)"
+        : "var(--border)"}">
+    <span style="font-family:'JetBrains Mono',monospace;font-size:20px;flex-shrink:0;
+      color:${alertOn ? "var(--danger)" : "var(--accent)"}">◻</span>
+    <div style="flex:1;min-width:0">
+      <div style="font-weight:600;font-size:14px;color:var(--text)">Invoices</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:11px;
+        color:${alertOn ? "var(--danger)" : "var(--text-muted)"};margin-top:2px">
+        ${open.length === 0
+          ? "All settled — nothing outstanding"
+          : `${open.length} open · ${usd(total)}${overdue.length ? ` · ${overdue.length} overdue` : ""}`}
+      </div>
+    </div>
+    <span style="font-family:'JetBrains Mono',monospace;font-size:15px;
+      color:var(--text-muted);flex-shrink:0">→</span>
+  </div>`;
+})()}
+
 <!-- Period picker -->
 <div class="filter-row" style="margin-bottom:16px">
   ${Object.entries(PERIOD_LABELS).map(([k, label]) =>
