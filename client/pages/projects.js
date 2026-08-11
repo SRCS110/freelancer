@@ -140,11 +140,11 @@ function projectFileHTML(p) {
   </div>
 
   <!-- Column headers -->
-  <div style="display:grid;grid-template-columns:1fr 110px 110px 60px 90px;gap:0;padding:6px 20px;background:var(--bg);border-bottom:1px solid var(--border)">
+  <div class="todo-row todo-head" style="display:grid;grid-template-columns:1fr 110px 110px 60px 90px;gap:0;padding:6px 20px;background:var(--bg);border-bottom:1px solid var(--border)">
     <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px">Task</div>
-    <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px">Assignee</div>
-    <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px">Due Date</div>
-    <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px">Priority</div>
+    <div class="todo-col-assignee" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px">Assignee</div>
+    <div class="todo-col-due" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px">Due Date</div>
+    <div class="todo-col-priority" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px">Priority</div>
     <div></div>
   </div>
 
@@ -305,7 +305,7 @@ const PRI_DOT   = { high: "●", normal: "◆", low: "○" };
 function _todoRow(t, pid) {
   const isOverdue = t.due_date && new Date(t.due_date) < new Date() && !t.completed;
   return `
-<div style="display:grid;grid-template-columns:1fr 110px 110px 60px 90px;gap:0;
+<div class="todo-row" style="display:grid;grid-template-columns:1fr 110px 110px 60px 90px;gap:0;
   padding:8px 20px;border-bottom:1px solid var(--border);
   opacity:${t.completed ? ".45" : "1"};
   background:${t.completed ? "color-mix(in srgb,var(--bg) 60%,transparent)" : "transparent"};
@@ -333,20 +333,20 @@ function _todoRow(t, pid) {
   </div>
 
   <!-- Assignee -->
-  <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted);
+  <div class="todo-col-assignee" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted);
     display:flex;align-items:center;padding-right:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
     ${t.assignee ? `<span style="background:var(--accent-l,color-mix(in srgb,var(--accent) 15%,transparent));color:var(--accent);padding:2px 6px;border-radius:3px;font-size:10px">${t.assignee}</span>` : `<span style="color:var(--border-2)">—</span>`}
   </div>
 
   <!-- Due date -->
-  <div style="font-family:'JetBrains Mono',monospace;font-size:11px;
+  <div class="todo-col-due" style="font-family:'JetBrains Mono',monospace;font-size:11px;
     color:${isOverdue ? "var(--danger)" : "var(--text-muted)"};
     display:flex;align-items:center">
     ${t.due_date ? fmtDate(t.due_date) : `<span style="color:var(--border-2)">—</span>`}
   </div>
 
   <!-- Priority -->
-  <div style="display:flex;align-items:center">
+  <div class="todo-col-priority" style="display:flex;align-items:center">
     <span style="font-size:10px;color:${PRI_COLOR[t.priority] || "var(--text-muted)"}" title="${t.priority}">
       ${PRI_DOT[t.priority] || "◆"}
     </span>
