@@ -183,9 +183,9 @@ function sidebarHTML() {
 // ── Mobile bar + drawer + bottom tabs ────────────────────────
 
 const MOBILE_TABS = [
-  { id: "workspace", icon: "◇", iconActive: "◆", label: "Work",  pages: ["dashboard","clients","projects"] },
+  { id: "workspace", icon: "◇", iconActive: "◆", label: "Work",  pages: ["clients"] },
   { id: "money",     icon: "○", iconActive: "●", label: "Money", pages: ["finances","invoices"] },
-  { id: "tools",     icon: "◻", iconActive: "◼", label: "Tools", pages: ["bookmarks","tech-stack","brainstorm"] },
+  { id: "tools",     icon: "◻", iconActive: "◼", label: "Tools", pages: ["projects","bookmarks","tech-stack","brainstorm"] },
   { id: "ops",       icon: "△", iconActive: "▲", label: "Ops",   pages: ["workflows","team","ai"] },
 ];
 
@@ -196,11 +196,13 @@ function mobileBarParts() {
   const overdueCt   = (STATE.data?.invoices || []).filter(i => i.status === "Overdue").length;
   const activeTab   = STATE.page?.startsWith("hub-")
     ? STATE.page.slice(4)
-    : (MOBILE_TABS.find(t => t.pages.includes(STATE.page))?.id || "workspace");
+    : STATE.page === "dashboard"
+      ? "workspace"
+      : (MOBILE_TABS.find(t => t.pages.includes(STATE.page))?.id || "workspace");
 
   const isMobile = window.innerWidth <= 640;
   const topBar = `<div class="mobile-bar" style="${isMobile ? 'display:flex' : ''}">
-  <div class="mobile-bar-logo" onclick="navigate('dashboard')">${bizName}</div>
+  <div class="mobile-bar-logo" onclick="navigate('hub-workspace')">${bizName}</div>
   <div class="mobile-bar-actions">
     <!-- Theme toggle -->
     <button class="mobile-bar-btn" onclick="toggleTheme()" title="${isLight ? "dark" : "light"} mode">
@@ -313,7 +315,9 @@ function render() {
 
   let content = "";
   try {
-    if      (STATE.page === "dashboard")                         content = dashboardHTML();
+    if      (STATE.page === "dashboard")                         content = (window.innerWidth <= 640)
+                                                                   ? mobileHubHTML("workspace")
+                                                                   : dashboardHTML();
     else if (STATE.page === "clients")                           content = clientsHTML();
     else if (STATE.page === "projects" && STATE.openProject)     content = projectFileHTML(STATE.openProject);
     else if (STATE.page === "projects")                          content = projectsListHTML();
