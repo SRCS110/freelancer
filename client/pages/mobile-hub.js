@@ -153,13 +153,6 @@ function _workspaceSnapshot() {
     { page: "workflows",  icon: "◳", label: "Workflows", badge: `${runs.length} active` },
     { page: "brainstorm", icon: "◆", label: "Notes",     badge: `${notes.length}` },
     { page: "team",       icon: "◎", label: "Team",      badge: `${(d.team_members || []).length || 1}` },
-    { page: "business-plan", icon: "◈", label: "Plan",
-      badge: d.business_plan?.mission ? "set" : "empty",
-      badgeColor: d.business_plan?.mission ? "var(--accent)" : "var(--text-muted)" },
-    { page: "settings",   icon: "⚙", label: "Settings",  badge: "" },
-    { page: "ai",         icon: "✦", label: "AI",
-      badge: localStorage.getItem("fh_ai_key") ? "ready" : "connect",
-      badgeColor: localStorage.getItem("fh_ai_key") ? "var(--accent)" : "var(--text-muted)" },
   ]);
 
   // ── Rows ────────────────────────────────────────────────────
@@ -190,55 +183,9 @@ function _workspaceSnapshot() {
         : "")
   ).join("");
 
-  const statusColor = s =>
-    s === "Overdue" ? "var(--danger)" :
-    s === "Sent"    ? "var(--accent)" : "var(--text-muted)";
-
-  const invRows = invoices
-    .filter(i => ["Draft","Sent","Overdue"].includes(i.status))
-    .slice(0, 4)
-    .map(i => _hubRow(`${i.invoice_number} · ${usd(i.amount)}`, i.client_name || "",
-      `navigate('invoices')`,
-      `<span style="font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;
-        flex-shrink:0;color:${statusColor(i.status)}">${i.status.toUpperCase()}</span>`))
-    .join("");
-
-  const clientRows = clients.slice(0, 4).map(c => {
-    const count = projects.filter(p => p.client_id === c.id).length;
-    return _hubRow(c.name, c.company || "", `openClientFile('${c.id}')`,
-      `<span style="font-family:'JetBrains Mono',monospace;font-size:10px;
-        color:var(--text-muted);flex-shrink:0">${count} proj</span>`);
-  }).join("");
-
-  const finRows = finances.slice(0, 4).map(f =>
-    _hubRow(f.description || f.category || "Entry", fmtDate(f.date), `navigate('finances')`,
-      `<span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;
-        flex-shrink:0;color:${f.type === "income" ? "var(--accent)" : "var(--danger)"}">
-        ${f.type === "income" ? "+" : "-"}${usd(f.amount)}</span>`)
-  ).join("");
-
-  const runRows = runs.slice(0, 3).map(r =>
-    _hubRow(r.name, r.client_name || "", `navigate('workflows')`, "")
-  ).join("");
-
-  const renewalRows = stack
-    .filter(t => t.renewal_date && t.cycle !== "one-time")
-    .sort((a, b) => a.renewal_date < b.renewal_date ? -1 : 1)
-    .slice(0, 3)
-    .map(t => _hubRow(t.name, `${t.cycle} · renews ${fmtDate(t.renewal_date)}`,
-      `navigate('tech-stack')`,
-      `<span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;
-        color:var(--text);flex-shrink:0">${usd(t.amount)}</span>`))
-    .join("");
-
   return alerts + money + tiles
-    + _hubCard("Upcoming tasks",      todoRows,    "No open tasks. Add one inside a project.", "projects")
-    + _hubCard("Active projects",     projRows,    "No active projects yet.",                  "projects")
-    + _hubCard("Open invoices",       invRows,     "No open invoices.",                        "invoices")
-    + _hubCard("Recent entries",      finRows,     "No finance entries yet.",                  "finances")
-    + _hubCard("Clients",             clientRows,  "No clients yet.",                          "clients")
-    + _hubCard("Active workflow runs", runRows,    "No active runs.",                          "workflows")
-    + _hubCard("Upcoming renewals",   renewalRows, "No recurring subscriptions tracked.",      "tech-stack");
+    + _hubCard("Upcoming tasks",  todoRows, "No open tasks. Add one inside a project.", "projects")
+    + _hubCard("Active projects", projRows, "No active projects yet.",                  "projects");
 }
 
 const HUB_SNAPSHOTS = {
