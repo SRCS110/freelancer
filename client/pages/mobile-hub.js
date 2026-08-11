@@ -8,11 +8,9 @@
 const HUB_CONFIG = {
   workspace: {
     title: "Workspace",
-    sub:   "Clients, projects and your day at a glance",
+    sub:   "Your business at a glance",
     pages: [
-      { id: "dashboard", label: "Dashboard", icon: "◈", desc: "KPIs and recent activity" },
-      { id: "clients",   label: "Clients",   icon: "◎", desc: "Client files and documents" },
-      { id: "projects",  label: "Projects",  icon: "◫", desc: "Project files and tasks" },
+      { id: "clients", label: "Clients", icon: "◎", desc: "Client files and documents" },
     ],
   },
   money: {
@@ -25,8 +23,9 @@ const HUB_CONFIG = {
   },
   tools: {
     title: "Tools",
-    sub:   "Bookmarks, subscriptions and ideas",
+    sub:   "Projects, bookmarks, subscriptions and ideas",
     pages: [
+      { id: "projects",   label: "Projects",   icon: "◫", desc: "Project files and tasks" },
       { id: "bookmarks",  label: "Bookmarks",  icon: "◉", desc: "Saved links and credentials" },
       { id: "tech-stack", label: "Tech Stack", icon: "◳", desc: "Recurring subscriptions" },
       { id: "brainstorm", label: "Brainstorm", icon: "◆", desc: "Notes and guided sessions" },
@@ -86,60 +85,125 @@ function _hubCard(heading, bodyHTML, emptyText) {
 // ── Section snapshots ─────────────────────────────────────────
 function _workspaceSnapshot() {
   const d        = STATE.data || {};
-  const projects = (d.projects || []);
-  const clients  = (d.clients  || []);
-  const active   = projects.filter(p => p.status === "Active");
-  const leads    = clients.filter(c => c.status === "Lead");
+  const projects = d.projects || [];
+  const clients  = d.clients  || [];
+  const invoices = d.invoices || [];
+  const finances = d.finances || [];
+  const today    = new Date().toISOString().slice(0, 10);
+  const month    = today.slice(0, 7);
 
-  // Upcoming tasks — incomplete, soonest due date first
-  const todos = (d.project_todos || [])
-    .filter(t => !t.completed)
+  const active   = projects.filter(p => p.status === "Active");
+  const openTodo = (d.project_todos || []).filter(t => !t.completed);
+  const income   = finances.filter(f => f.type === "income"  && f.date?.startsWith(month))
+                           .reduce((a, f) => a + Number(f.amount), 0);
+  const expense  = finances.filter(f => f.type === "expense" && f.date?.startsWith(month))
+                           .reduce((a, f) => a + Number(f.amount), 0);
+  const overdue  = invoices.filter(i => i.status === "Overdue");
+  const unpaid   = invoices.filter(i => ["Sent","Overdue"].includes(i.status));
+
+  // ── Alerts ──────────────────────────────────────────────────
+  const overdueTasks = openTodo.filter(t => t.due_date && t.due_date < today);
+  let alerts = "";
+  if (overdue.length) {
+    alerts += `
+    <div onclick="navigate('invoices')"
+      style="padding:11px 13px;margin-bottom:8px;border-radius:6px;cursor:pointer;
+        background:color-mix(in srgb,var(--danger) 10%,transparent);
+        border:1px solid color-mix(in srgb,var(--danger) 30%,transparent);
+        font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--danger)">
+      ${overdue.length} overdue invoice${overdue.length !== 1 ? "s" : ""} ·
+      ${usd(overdue.reduce((a, i) => a + Number(i.amount), 0))} outstanding →
+    </div>`;
+  }
+  if (overdueTasks.length) {
+    alerts += `
+    <div onclick="navigate('projects')"
+      style="padding:11px 13px;margin-bottom:8px;border-radius:6px;cursor:pointer;
+        background:color-mix(in srgb,var(--warning) 10%,transparent);
+        border:1px solid color-mix(in srgb,var(--warning) 30%,transparent);
+        font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--warning)">
+      ${overdueTasks.length} task${overdueTasks.length !== 1 ? "s" : ""} past due →
+    </div>`;
+  }
+  if (alerts) alerts = `<div style="margin-bottom:14px">${alerts}</div>`;
+
+  // ── Money row ───────────────────────────────────────────────
+  const money = `
+  <div style="display:flex;gap:8px;margin-bottom:10px">
+    ${_hubStat("Income (mo)", usd(income), "var(--accent)")}
+    ${_hubStat("Expenses (mo)", usd(expense), "var(--danger)")}
+    ${_hubStat("Net (mo)", usd(income - expense))}
+  </div>
+  <div style="display:flex;gap:8px;margin-bottom:14px">
+    ${_hubStat("Unpaid", usd(unpaid.reduce((a,i) => a + Number(i.amount), 0)),
+               overdue.length ? "var(--danger)" : "var(--text)")}
+    ${_hubStat("Active projects", active.length, "var(--accent)")}
+    ${_hubStat("Open tasks", openTodo.length)}
+  </div>`;
+
+  // ── Upcoming tasks ──────────────────────────────────────────
+  const todos = openTodo
+    .slice()
     .sort((a, b) => {
       if (!a.due_date) return 1;
       if (!b.due_date) return -1;
       return a.due_date < b.due_date ? -1 : 1;
     })
-    .slice(0, 4);
+    .slice(0, 5);
 
-  const today = new Date().toISOString().slice(0, 10);
-
-  const stats = `
-  <div style="display:flex;gap:8px;margin-bottom:14px">
-    ${_hubStat("Active projects", active.length, "var(--accent)")}
-    ${_hubStat("Clients", clients.length)}
-    ${_hubStat("Open tasks", (d.project_todos || []).filter(t => !t.completed).length)}
-  </div>`;
-
-  const todoRows = todos.length ? todos.map(t => {
-    const proj    = projects.find(p => p.id === t.project_id);
-    const overdue = t.due_date && t.due_date < today;
+  const todoRows = todos.map(t => {
+    const proj = projects.find(p => p.id === t.project_id);
+    const late = t.due_date && t.due_date < today;
     return _hubRow(
       t.title,
       proj?.name || "",
       proj ? `openProject(${JSON.stringify(proj).replace(/'/g, "&#39;")})` : `navigate('projects')`,
       t.due_date
         ? `<span style="font-family:'JetBrains Mono',monospace;font-size:10px;flex-shrink:0;
-             color:${overdue ? "var(--danger)" : "var(--text-muted)"}">${fmtDate(t.due_date)}</span>`
+             color:${late ? "var(--danger)" : "var(--text-muted)"}">${fmtDate(t.due_date)}</span>`
         : ""
     );
-  }).join("") : "";
+  }).join("");
 
+  // ── Active projects ─────────────────────────────────────────
   const projRows = active.slice(0, 4).map(p =>
-    _hubRow(p.name, p.client_name || "", `openProject(${JSON.stringify(p).replace(/'/g, "&#39;")})`,
-      p.deadline ? `<span style="font-family:'JetBrains Mono',monospace;font-size:10px;
-        color:var(--text-muted);flex-shrink:0">${fmtDate(p.deadline)}</span>` : "")
+    _hubRow(p.name, p.client_name || "",
+      `openProject(${JSON.stringify(p).replace(/'/g, "&#39;")})`,
+      p.deadline
+        ? `<span style="font-family:'JetBrains Mono',monospace;font-size:10px;
+             color:var(--text-muted);flex-shrink:0">${fmtDate(p.deadline)}</span>`
+        : "")
   ).join("");
 
-  const leadRows = leads.slice(0, 3).map(c =>
-    _hubRow(c.name, c.company || "", `openClientFile('${c.id}')`,
-      `<span style="font-family:'JetBrains Mono',monospace;font-size:9px;flex-shrink:0;
-        color:var(--accent)">LEAD</span>`)
-  ).join("");
+  // ── Open invoices ───────────────────────────────────────────
+  const statusColor = s =>
+    s === "Overdue" ? "var(--danger)" :
+    s === "Sent"    ? "var(--accent)" : "var(--text-muted)";
 
-  return stats
-    + _hubCard("Upcoming tasks", todoRows, "No open tasks. Add one inside a project.")
-    + _hubCard("Active projects", projRows, "No active projects yet.")
-    + (leadRows ? _hubCard("Leads", leadRows, "") : "");
+  const invRows = invoices
+    .filter(i => ["Draft","Sent","Overdue"].includes(i.status))
+    .slice(0, 4)
+    .map(i => _hubRow(
+      `${i.invoice_number} · ${usd(i.amount)}`,
+      i.client_name || "",
+      `navigate('invoices')`,
+      `<span style="font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;
+        flex-shrink:0;color:${statusColor(i.status)}">${i.status.toUpperCase()}</span>`
+    )).join("");
+
+  // ── Clients ─────────────────────────────────────────────────
+  const clientRows = clients.slice(0, 4).map(c => {
+    const count = projects.filter(p => p.client_id === c.id).length;
+    return _hubRow(c.name, c.company || "", `openClientFile('${c.id}')`,
+      `<span style="font-family:'JetBrains Mono',monospace;font-size:10px;
+        color:var(--text-muted);flex-shrink:0">${count} proj</span>`);
+  }).join("");
+
+  return alerts + money
+    + _hubCard("Upcoming tasks",  todoRows,   "No open tasks. Add one inside a project.")
+    + _hubCard("Active projects", projRows,   "No active projects yet.")
+    + _hubCard("Open invoices",   invRows,    "No open invoices.")
+    + _hubCard("Clients",         clientRows, "No clients yet.");
 }
 
 function _moneySnapshot() {
@@ -206,12 +270,24 @@ function _toolsSnapshot() {
   const monthly = stack.filter(t => t.cycle === "monthly")
                        .reduce((a, t) => a + Number(t.amount || 0), 0);
 
+  const projects = (d.projects || []);
+  const active   = projects.filter(p => p.status === "Active");
+
   const stats = `
   <div style="display:flex;gap:8px;margin-bottom:14px">
+    ${_hubStat("Active projects", active.length, "var(--accent)")}
     ${_hubStat("Monthly burn", usd(monthly), "var(--danger)")}
     ${_hubStat("Bookmarks", marks.length)}
-    ${_hubStat("Notes", notes.length)}
   </div>`;
+
+  const projRows = active.slice(0, 4).map(p =>
+    _hubRow(p.name, p.client_name || "",
+      `openProject(${JSON.stringify(p).replace(/'/g, "&#39;")})`,
+      p.deadline
+        ? `<span style="font-family:'JetBrains Mono',monospace;font-size:10px;
+             color:var(--text-muted);flex-shrink:0">${fmtDate(p.deadline)}</span>`
+        : "")
+  ).join("");
 
   const linkRows = marks.filter(b => b.url).slice(0, 5).map(b =>
     _hubRow(b.name, b.url.replace(/^https?:\/\//, "").split("/")[0],
@@ -231,6 +307,7 @@ function _toolsSnapshot() {
     .join("");
 
   return stats
+    + _hubCard("Active projects", projRows, "No active projects yet.")
     + _hubCard("Quick links", linkRows, "No bookmarks with links yet.")
     + _hubCard("Upcoming renewals", renewals, "No recurring subscriptions tracked.");
 }
