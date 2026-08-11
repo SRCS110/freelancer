@@ -6,12 +6,11 @@
 // ============================================================
 
 const HUB_CONFIG = {
+  // Reached from the logo / dashboard route — the mobile overview
   workspace: {
-    title: "Workspace",
+    title: "Overview",
     sub:   "Your business at a glance",
-    pages: [
-      { id: "clients", label: "Clients", icon: "◎", desc: "Client files and documents" },
-    ],
+    pages: [],
   },
   money: {
     title: "Money",
@@ -23,21 +22,13 @@ const HUB_CONFIG = {
   },
   tools: {
     title: "Tools",
-    sub:   "Projects, bookmarks, subscriptions and ideas",
+    sub:   "Everything else",
     pages: [
-      { id: "projects",   label: "Projects",   icon: "◫", desc: "Project files and tasks" },
       { id: "bookmarks",  label: "Bookmarks",  icon: "◉", desc: "Saved links and credentials" },
       { id: "tech-stack", label: "Tech Stack", icon: "◳", desc: "Recurring subscriptions" },
       { id: "brainstorm", label: "Brainstorm", icon: "◆", desc: "Notes and guided sessions" },
-    ],
-  },
-  ops: {
-    title: "Operations",
-    sub:   "Workflows, team and AI",
-    pages: [
-      { id: "workflows", label: "Workflows",    icon: "◳", desc: "SOP templates and live runs" },
-      { id: "team",      label: "Team",         icon: "◎", desc: "Members and invites" },
-      { id: "ai",        label: "AI Assistant", icon: "✦", desc: "Your business advisor" },
+      { id: "workflows",  label: "Workflows",  icon: "◳", desc: "SOP templates and live runs" },
+      { id: "team",       label: "Team",       icon: "◎", desc: "Members and invites" },
     ],
   },
 };
@@ -267,27 +258,17 @@ function _toolsSnapshot() {
   const stack   = d.tech_stack || [];
   const marks   = d.bookmarks  || [];
   const notes   = d.brainstorm || [];
+  const runs    = (d.workflow_runs || []).filter(r => r.status === "active");
+  const members = d.team_members || [];
   const monthly = stack.filter(t => t.cycle === "monthly")
                        .reduce((a, t) => a + Number(t.amount || 0), 0);
 
-  const projects = (d.projects || []);
-  const active   = projects.filter(p => p.status === "Active");
-
   const stats = `
   <div style="display:flex;gap:8px;margin-bottom:14px">
-    ${_hubStat("Active projects", active.length, "var(--accent)")}
     ${_hubStat("Monthly burn", usd(monthly), "var(--danger)")}
+    ${_hubStat("Active runs", runs.length, "var(--accent)")}
     ${_hubStat("Bookmarks", marks.length)}
   </div>`;
-
-  const projRows = active.slice(0, 4).map(p =>
-    _hubRow(p.name, p.client_name || "",
-      `openProject(${JSON.stringify(p).replace(/'/g, "&#39;")})`,
-      p.deadline
-        ? `<span style="font-family:'JetBrains Mono',monospace;font-size:10px;
-             color:var(--text-muted);flex-shrink:0">${fmtDate(p.deadline)}</span>`
-        : "")
-  ).join("");
 
   const linkRows = marks.filter(b => b.url).slice(0, 5).map(b =>
     _hubRow(b.name, b.url.replace(/^https?:\/\//, "").split("/")[0],
@@ -306,48 +287,20 @@ function _toolsSnapshot() {
         color:var(--text);flex-shrink:0">${usd(t.amount)}</span>`))
     .join("");
 
-  return stats
-    + _hubCard("Active projects", projRows, "No active projects yet.")
-    + _hubCard("Quick links", linkRows, "No bookmarks with links yet.")
-    + _hubCard("Upcoming renewals", renewals, "No recurring subscriptions tracked.");
-}
-
-function _opsSnapshot() {
-  const d       = STATE.data || {};
-  const runs    = (d.workflow_runs || []).filter(r => r.status === "active");
-  const tmpl    = d.workflow_templates || [];
-  const members = d.team_members || [];
-  const hasAI   = !!localStorage.getItem("fh_ai_key");
-
-  const stats = `
-  <div style="display:flex;gap:8px;margin-bottom:14px">
-    ${_hubStat("Active runs", runs.length, "var(--accent)")}
-    ${_hubStat("Templates", tmpl.length)}
-    ${_hubStat("Team", members.length || 1)}
-  </div>`;
-
   const runRows = runs.slice(0, 4).map(r =>
     _hubRow(r.name, r.client_name || "", `navigate('workflows')`, "")
   ).join("");
 
-  const aiRow = _hubRow(
-    hasAI ? "AI Assistant connected" : "Connect your AI",
-    hasAI ? "Ask anything about your business" : "Bring your own OpenAI or Anthropic key",
-    `navigate('ai')`,
-    `<span style="font-family:'JetBrains Mono',monospace;font-size:11px;flex-shrink:0;
-      color:${hasAI ? "var(--accent)" : "var(--text-muted)"}">${hasAI ? "✦" : "→"}</span>`
-  );
-
   return stats
+    + _hubCard("Quick links", linkRows, "No bookmarks with links yet.")
     + _hubCard("Active workflow runs", runRows, "No active runs. Start one from a template.")
-    + _hubCard("Assistant", aiRow, "");
+    + _hubCard("Upcoming renewals", renewals, "No recurring subscriptions tracked.");
 }
 
 const HUB_SNAPSHOTS = {
   workspace: _workspaceSnapshot,
   money:     _moneySnapshot,
   tools:     _toolsSnapshot,
-  ops:       _opsSnapshot,
 };
 
 // ── Main hub renderer ─────────────────────────────────────────
@@ -366,6 +319,7 @@ window.mobileHubHTML = function(sectionId) {
 </div>
 
 <!-- Page links -->
+${cfg.pages.length === 0 ? "" : `
 <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:18px">
   ${cfg.pages.map(pg => `
   <div onclick="navigate('${pg.id}')"
@@ -383,7 +337,7 @@ window.mobileHubHTML = function(sectionId) {
     <span style="font-family:'JetBrains Mono',monospace;font-size:13px;
       color:var(--text-muted);flex-shrink:0">→</span>
   </div>`).join("")}
-</div>
+</div>`}
 
 ${snapshot}`;
 };
