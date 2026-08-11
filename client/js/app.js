@@ -183,10 +183,10 @@ function sidebarHTML() {
 // ── Mobile bar + drawer + bottom tabs ────────────────────────
 
 const MOBILE_TABS = [
-  { id: "workspace", icon: "◈", label: "Work",  pages: ["dashboard","clients","projects"] },
-  { id: "money",     icon: "◇", label: "Money", pages: ["finances","invoices"] },
-  { id: "tools",     icon: "◉", label: "Tools", pages: ["bookmarks","tech-stack","brainstorm"] },
-  { id: "ops",       icon: "◳", label: "Ops",   pages: ["workflows","team","ai"] },
+  { id: "workspace", icon: "◇", iconActive: "◆", label: "Work",  pages: ["dashboard","clients","projects"] },
+  { id: "money",     icon: "○", iconActive: "●", label: "Money", pages: ["finances","invoices"] },
+  { id: "tools",     icon: "◻", iconActive: "◼", label: "Tools", pages: ["bookmarks","tech-stack","brainstorm"] },
+  { id: "ops",       icon: "△", iconActive: "▲", label: "Ops",   pages: ["workflows","team","ai"] },
 ];
 
 function mobileBarParts() {
@@ -248,7 +248,7 @@ function mobileBarParts() {
     return `
   <div class="mobile-tab${isActive ? " active" : ""}" onclick="mobileTabClick('${tab.id}')">
     <div style="position:relative;display:inline-flex">
-      <span class="mobile-tab-icon">${tab.icon}</span>
+      <span class="mobile-tab-icon">${isActive ? (tab.iconActive || tab.icon) : tab.icon}</span>
       ${hasOverdue ? `<span style="position:absolute;top:-2px;right:-6px;width:7px;height:7px;background:var(--danger);border-radius:50%;border:1.5px solid var(--bg)"></span>` : ""}
     </div>
     <span class="mobile-tab-label">${tab.label}</span>
