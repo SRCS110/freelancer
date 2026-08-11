@@ -73,11 +73,12 @@ async function loadAll() {
   } catch (e) {
     console.error("loadAll error:", e.message);
   }
-  // Auto-mark overdue invoices
-  await _checkOverdueInvoices();
-
   STATE.loading = false;
-  render();
+
+  // Auto-mark overdue invoices (non-blocking)
+  _checkOverdueInvoices().catch(e => console.warn("overdue check:", e.message));
+
+  try { render(); } catch(e) { console.error("render after loadAll:", e.message); }
 }
 
 async function _checkOverdueInvoices() {
@@ -323,18 +324,30 @@ function render() {
     </div>`;
   }
 
-  const { topBar, bottomTabs, drawer } = mobileBarParts();
-  root.innerHTML = sidebarHTML() + topBar + drawer + `<div class="main">${content}</div>`;
+  let topBar = "", drawer = "", bottomTabs = "";
+  try {
+    const parts = mobileBarParts();
+    topBar = parts.topBar || "";
+    drawer = parts.drawer || "";
+    bottomTabs = parts.bottomTabs || "";
+  } catch(e) { console.warn("mobileBarParts:", e.message); }
 
-  // Bottom tabs live outside root — fixed to screen bottom
-  let tabsEl = document.getElementById("mobile-tabs-bar");
-  if (!tabsEl) {
-    tabsEl = document.createElement("div");
-    tabsEl.id = "mobile-tabs-bar";
-    document.body.appendChild(tabsEl);
+  try {
+    root.innerHTML = sidebarHTML() + topBar + drawer + `<div class="main">${content}</div>`;
+  } catch(e) {
+    console.error("sidebar render error:", e.message);
+    root.innerHTML = `<div class="main">${content}</div>`;
   }
-  tabsEl.innerHTML = bottomTabs;
 
+  try {
+    let tabsEl = document.getElementById("mobile-tabs-bar");
+    if (!tabsEl) {
+      tabsEl = document.createElement("div");
+      tabsEl.id = "mobile-tabs-bar";
+      document.body.appendChild(tabsEl);
+    }
+    if (bottomTabs) tabsEl.innerHTML = bottomTabs;
+  } catch(e) { console.warn("tabs inject:", e.message); }
 }
 
 // ── Nav group collapse ────────────────────────────────────────
