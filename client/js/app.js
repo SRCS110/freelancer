@@ -194,7 +194,9 @@ function mobileBarParts() {
   const bizName     = s?.business_name || STATE.data?.business_plan?.business_name || "Freelancer";
   const isLight     = _isLight();
   const overdueCt   = (STATE.data?.invoices || []).filter(i => i.status === "Overdue").length;
-  const activeTab   = MOBILE_TABS.find(t => t.pages.includes(STATE.page))?.id || "workspace";
+  const activeTab   = STATE.page?.startsWith("hub-")
+    ? STATE.page.slice(4)
+    : (MOBILE_TABS.find(t => t.pages.includes(STATE.page))?.id || "workspace");
 
   const isMobile = window.innerWidth <= 640;
   const topBar = `<div class="mobile-bar" style="${isMobile ? 'display:flex' : ''}">
@@ -261,15 +263,10 @@ function mobileBarParts() {
 // - If already on that tab's section → show drawer with sub-pages
 // - If not → navigate to first page in that section
 window.mobileTabClick = function(tabId) {
-  const tab      = MOBILE_TABS.find(t => t.id === tabId);
-  const isActive = tab?.pages.includes(STATE.page);
-  if (isActive && tab.pages.length > 1) {
-    // Show drawer with this tab's sub-pages
-    window._drawerTabFilter = tabId;
-    toggleDrawer();
-  } else {
-    navigate(tab.pages[0]);
-  }
+  // Always land on the section hub — it links to every page in that section
+  STATE.openProject = null;
+  window._openClientId = null;
+  navigate("hub-" + tabId);
 };
 
 // Store which tab filter the drawer is showing
@@ -330,6 +327,7 @@ function render() {
     else if (STATE.page === "brainstorm")                        content = brainstormHTML();
     else if (STATE.page === "team")                              content = teamHTML();
     else if (STATE.page === "ai")                               content = aiPageHTML();
+    else if (STATE.page?.startsWith("hub-"))                    content = mobileHubHTML(STATE.page.slice(4));
   } catch(e) {
     console.error("render error on page", STATE.page, ":", e.message, e.stack);
     content = `<div class="card" style="border-color:var(--danger)">
@@ -346,8 +344,21 @@ function render() {
     bottomTabs = parts.bottomTabs || "";
   } catch(e) { console.warn("mobileBarParts:", e.message); }
 
+  // Mobile: show a back link to the section hub when on a sub-page
+  let backLink = "";
   try {
-    root.innerHTML = sidebarHTML() + `<div class="main">${content}</div>`;
+    const isMobileView = window.innerWidth <= 640;
+    const parentTab = MOBILE_TABS.find(t => t.pages.includes(STATE.page));
+    if (isMobileView && parentTab && !STATE.page?.startsWith("hub-")) {
+      backLink = `<div onclick="navigate('hub-${parentTab.id}')"
+        style="display:inline-flex;align-items:center;gap:6px;margin-bottom:12px;
+               cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:11px;
+               color:var(--text-muted)">← ${parentTab.label}</div>`;
+    }
+  } catch(e) { console.warn("backlink:", e.message); }
+
+  try {
+    root.innerHTML = sidebarHTML() + `<div class="main">${backLink}${content}</div>`;
   } catch(e) {
     console.error("sidebar render error:", e.message);
     root.innerHTML = `<div class="main">${content}</div>`;
