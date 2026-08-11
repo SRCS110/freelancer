@@ -793,3 +793,9 @@ input::placeholder, textarea::placeholder {
 .empty-text { font-family: var(--font-sans); }
 hr, .divider { border-color: var(--border); }
 ::selection { background: color-mix(in srgb, var(--accent) 30%, transparent); color: var(--text); }
+
+/* ── Visibility utilities ───────────────────────────────────── */
+.mobile-only { display: none; }
+@media (max-width: 640px) {
+  .mobile-only { display: flex !important; }
+}
