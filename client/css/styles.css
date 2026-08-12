@@ -290,10 +290,57 @@ button { font-family: 'Inter', sans-serif; cursor: pointer; border: none; border
 
 /* ── Projects ──────────────────────────────────────────────── */
 .projects-grid      { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
-.project-card       { background: var(--bg-raised); border: 1px solid var(--border); border-radius: 4px; padding: 20px; cursor: pointer; transition: all .15s; }
-.project-card:hover { border-color: color-mix(in srgb, var(--accent) 40%, transparent); transform: translateY(-1px); box-shadow: 0 4px 16px var(--shadow); }
-.project-card-name   { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
-.project-card-client { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-muted); margin-bottom: 10px; }
+/* Shared by Projects and Clients — mirrors the finance summary cards */
+.project-card {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+  cursor: pointer;
+  transition: border-color .15s, transform .15s, box-shadow .15s;
+  box-shadow: 0 1px 2px var(--shadow);
+}
+.project-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px var(--shadow);
+}
+/* Name reads like .card-value; the label above it like .card-label */
+.project-card-name {
+  font-family: var(--font-mono);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  word-break: break-word;
+}
+.project-card-client { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); margin-bottom: 10px; }
+.project-card-desc {
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin: 10px 0 0;
+}
+.clamp-2 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.project-card-foot {
+  display: flex;
+  gap: 14px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.project-card-foot span {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
 
 /* ── Breadcrumb ────────────────────────────────────────────── */
 .breadcrumb      { display: flex; align-items: center; gap: 8px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-muted); margin-bottom: 24px; }
@@ -580,7 +627,7 @@ button { font-family: 'Inter', sans-serif; cursor: pointer; border: none; border
 
   /* Grids */
   .grid-2, .grid-3, .grid-4, .form-row, .fin-summary { grid-template-columns: 1fr; }
-  .projects-grid, .bookmark-grid { grid-template-columns: 1fr; }
+  .bookmark-grid { grid-template-columns: 1fr; }
   .pf-body { grid-template-columns: 1fr; }
 
   /* Page headers */
@@ -925,4 +972,21 @@ hr, .divider { border-color: var(--border); }
 
   /* Cards no longer scroll sideways — content wraps instead */
   .card { overflow-x: visible !important; }
+}
+
+/* ── Project & client cards: two-up on mobile, like finance cards ─ */
+@media (max-width: 640px) {
+  .projects-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+  }
+  .project-card      { padding: 13px !important; }
+  .project-card-name { font-size: 14px !important; }
+  .project-card-desc { display: none; }          /* too cramped at half width */
+  .project-card-foot { gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .project-card .badge {
+    font-size: 9px !important;
+    padding: 2px 7px !important;
+    flex-shrink: 0;
+  }
 }
