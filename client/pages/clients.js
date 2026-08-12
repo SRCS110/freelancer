@@ -39,31 +39,24 @@ ${clients.length === 0
       <div class="empty-text">no clients yet.</div>
       <button class="btn btn-primary" onclick="openClientModal(null)">+ new client</button>
     </div>`
-  : `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
+  : `<div class="projects-grid">
       ${clients.map(c => {
         const projects = (STATE.data.projects || []).filter(p => p.client_id === c.id);
         const docs     = (STATE.data.client_documents || []).filter(d => d.client_id === c.id);
         return `
-        <div style="background:var(--bg-raised);border:1px solid var(--border);border-radius:10px;padding:18px;cursor:pointer;transition:border-color .15s"
-          onclick="openClientFile('${c.id}')"
-          onmouseover="this.style.borderColor='color-mix(in srgb,var(--accent) 40%,transparent)'"
-          onmouseout="this.style.borderColor='var(--border)'">
-          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:10px">
-            <div>
-              <div style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--text)">${c.name}</div>
-              ${c.company ? `<div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted);margin-top:2px">${c.company}</div>` : ""}
+        <div class="project-card" onclick="openClientFile('${c.id}')">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+            <div style="min-width:0">
+              <div class="card-label">${c.company || "Client"}</div>
+              <div class="project-card-name">${c.name}</div>
             </div>
             ${badge(c.status)}
           </div>
-          ${c.email ? `<div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);margin-bottom:4px">${c.email}</div>` : ""}
-          ${c.phone ? `<div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted);margin-bottom:8px">${c.phone}</div>` : ""}
-          <div style="display:flex;gap:12px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
-            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted)">
-              ◫ ${projects.length} project${projects.length !== 1 ? "s" : ""}
-            </span>
-            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted)">
-              ◻ ${docs.length} doc${docs.length !== 1 ? "s" : ""}
-            </span>
+          ${c.email ? `<div class="project-card-desc" style="color:var(--accent)">${c.email}</div>` : ""}
+          ${c.phone ? `<div class="project-card-desc">${c.phone}</div>` : ""}
+          <div class="project-card-foot">
+            <span>◫ ${projects.length} project${projects.length !== 1 ? "s" : ""}</span>
+            <span>◻ ${docs.length} doc${docs.length !== 1 ? "s" : ""}</span>
           </div>
         </div>`;
       }).join("")}

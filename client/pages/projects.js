@@ -46,19 +46,18 @@ ${filtered.length === 0
         const col   = STATUS_COLORS[p.status] || "var(--text-muted)";
         return `
 <div class="project-card" onclick='openProject(${JSON.stringify(p).replace(/'/g,"&#39;")})'>
-  <div style="height:3px;background:${col};border-radius:2px;margin-bottom:14px"></div>
-  <div style="display:flex;justify-content:space-between;align-items:flex-start">
-    <div>
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+    <div style="min-width:0">
+      <div class="card-label">${p.client_name || "No client"}</div>
       <div class="project-card-name">${p.name}</div>
-      <div class="project-card-client">${p.client_name || "No client"}</div>
     </div>
     ${badge(p.status)}
   </div>
-  ${p.description ? `<div style="font-size:12px;color:var(--text-muted);line-height:1.5;margin:8px 0;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">${p.description}</div>` : ""}
+  ${p.description ? `<div class="project-card-desc clamp-2">${p.description}</div>` : ""}
 
-  <div style="display:flex;gap:12px;padding-top:10px;border-top:1px solid var(--border)">
-    ${p.deadline ? `<span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted)">${fmtDate(p.deadline)}</span>` : ""}
-    ${p.budget   ? `<span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted)">${usd(p.budget)}</span>` : ""}
+  <div class="project-card-foot">
+    ${p.deadline ? `<span>${fmtDate(p.deadline)}</span>` : ""}
+    ${p.budget   ? `<span>${usd(p.budget)}</span>` : ""}
   </div>
 </div>`;
       }).join("")}
@@ -274,14 +273,19 @@ window.renderProjectSearch = function(q) {
     const col = STATUS_COLORS[p.status] || "var(--text-muted)";
     return `
 <div class="project-card" onclick='openProject(${JSON.stringify(p).replace(/'/g,"&#39;")})'>
-  <div style="height:3px;background:${col};border-radius:2px;margin-bottom:14px"></div>
-  <div style="display:flex;justify-content:space-between;align-items:flex-start">
-    <div>
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+    <div style="min-width:0">
+      <div class="card-label">${p.client_name || "No client"}</div>
       <div class="project-card-name">${p.name}</div>
-      <div class="project-card-client">${p.client_name || "No client"}</div>
     </div>
     ${badge(p.status)}
   </div>
+  ${p.description ? `<div class="project-card-desc clamp-2">${p.description}</div>` : ""}
+  ${(p.deadline || p.budget) ? `
+  <div class="project-card-foot">
+    ${p.deadline ? `<span>${fmtDate(p.deadline)}</span>` : ""}
+    ${p.budget   ? `<span>${usd(p.budget)}</span>`      : ""}
+  </div>` : ""}
 </div>`;
   }).join("");
 };
