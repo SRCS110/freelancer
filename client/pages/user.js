@@ -84,6 +84,13 @@ function userSettingsHTML() {
     </div>
   </div>
   <div class="form-group">
+    <label class="form-label">Default Hourly Rate ($)</label>
+    <input id="us-hourly-rate" type="number" step="1" min="0"
+      value="${s.default_hourly_rate ?? ""}" placeholder="85"/>
+    <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Used for time tracking when a project has no rate of its own.</div>
+  </div>
+
+  <div class="form-group">
     <label class="form-label">Business Name</label>
     <input id="us-business-name" value="${s.business_name || ""}" placeholder="Acme Freelance Co."/>
     <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Used on invoice headers and exports.</div>
@@ -227,6 +234,7 @@ window.saveUserSettings = async function() {
     const body = {
       display_name:       document.getElementById("us-display-name").value.trim(),
       business_name:      document.getElementById("us-business-name").value.trim(),
+      default_hourly_rate: parseFloat(document.getElementById("us-hourly-rate").value) || null,
       address_street:     document.getElementById("us-address-street").value.trim(),
       address_city:       document.getElementById("us-address-city").value.trim(),
       address_state:      document.getElementById("us-address-state").value.trim(),

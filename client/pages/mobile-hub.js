@@ -146,7 +146,6 @@ function _workspaceSnapshot() {
       badge: overdue.length ? `${overdue.length} overdue` : `${unpaid.length} unpaid`,
       badgeColor: overdue.length ? "var(--danger)" : "var(--text-muted)" },
     { page: "finances",   icon: "◇", label: "Finances",  badge: usd(income - expense) },
-    { page: "bookmarks",  icon: "◉", label: "Bookmarks", badge: `${(d.bookmarks || []).length}` },
     { page: "tech-stack", icon: "◳", label: "Stack",
       badge: usd(stack.filter(t => t.cycle === "monthly")
                       .reduce((a, t) => a + Number(t.amount || 0), 0)) + "/mo" },

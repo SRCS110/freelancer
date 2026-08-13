@@ -124,6 +124,8 @@ function projectFileHTML(p) {
   </div>
 </div>
 
+${typeof timeCardHTML === "function" ? timeCardHTML(p) : ""}
+
 <div class="card" style="margin-top:16px;padding:0;overflow:visible">
   <!-- Header -->
   <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)">
@@ -203,6 +205,10 @@ window.openProjectModal = function(id) {
 <div class="form-row">
   <div class="form-group"><label class="form-label">Deadline</label>
     <input id="p-deadline" type="date" value="${p?.deadline || ""}"/>
+  </div>
+  <div class="form-group"><label class="form-label">Hourly Rate ($)</label>
+    <input id="p-rate" type="number" step="1" min="0" value="${p?.hourly_rate ?? ""}"
+      placeholder="${STATE.data.user_settings?.default_hourly_rate || "e.g. 85"}"/>
   </div>
   <div class="form-group"><label class="form-label">Budget ($)</label>
     <input id="p-budget" type="number" value="${p?.budget || ""}" placeholder="0.00"/>
