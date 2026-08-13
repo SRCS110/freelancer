@@ -2,30 +2,55 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no"/>
 <title>Freelancer</title>
+
+<!-- Mobile / standalone app behaviour -->
+<meta name="description" content="Business OS for freelancers and small studios — clients, projects, invoices and finances in one place."/>
+<meta name="theme-color" content="#1a1917" media="(prefers-color-scheme: dark)"/>
+<meta name="theme-color" content="#faf9f7" media="(prefers-color-scheme: light)"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="Freelancer"/>
+<meta name="format-detection" content="telephone=no"/>
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Newsreader:opsz,wght@6..72,300;6..72,400;6..72,500&display=swap" rel="stylesheet"/>
+
 <link rel="stylesheet" href="client/css/styles.css"/>
 </head>
 <body>
+
 <div id="app">
-  <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bg,#1a1917);color:var(--text-muted,#a39d94);font-family:'JetBrains Mono',monospace;font-size:13px;letter-spacing:.5px">
+  <div style="position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:var(--bg,#1a1917);color:var(--text-muted,#a39d94);font-family:'JetBrains Mono',monospace;font-size:13px;letter-spacing:.5px">
+    <div style="width:26px;height:26px;border:2px solid rgba(127,227,184,.25);border-top-color:#7fe3b8;border-radius:50%;animation:fhspin .7s linear infinite"></div>
     loading…
   </div>
 </div>
+<style>@keyframes fhspin{to{transform:rotate(360deg)}}</style>
 
 <!--
   Load order matters:
-  1. auth   — config, db, session, OAuth (all-in-one)
-  2. utils  — shared helpers
-  3. pages  — each page renderer
-  4. app    — router + boot (must be last)
+  1. supabase — vendor SDK, must be synchronous and first
+  2. auth     — config, db wrapper, session, OAuth
+  3. pin      — credential PIN gate
+  4. utils    — shared helpers (usd, fmtDate, badge, modals)
+  5. pages    — one renderer per page
+  6. services — demo mode, auto-expense, onboarding, AI
+  7. app      — state, router, sidebar, boot (MUST be last)
 -->
-<!-- Supabase JS v2 — must load synchronously before auth.js -->
+
+<!-- 1. Vendor -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
+<!-- 2–4. Core -->
 <script src="client/js/auth.js"></script>
 <script src="client/js/pin.js"></script>
 <script src="client/js/utils.js"></script>
+
+<!-- 5. Pages -->
 <script src="client/pages/dashboard.js"></script>
 <script src="client/pages/clients.js"></script>
 <script src="client/pages/projects.js"></script>
@@ -33,17 +58,21 @@
 <script src="client/pages/invoices.js"></script>
 <script src="client/pages/business-plan.js"></script>
 <script src="client/pages/user.js"></script>
-<script src="client/pages/bookmarks.js"></script>
 <script src="client/pages/tech-stack.js"></script>
 <script src="client/pages/workflows.js"></script>
 <script src="client/pages/brainstorm.js"></script>
 <script src="client/pages/team.js"></script>
+<script src="client/pages/mobile-hub.js"></script>
+
+<!-- 6. Services -->
 <script src="client/js/demo-data.js"></script>
 <script src="client/js/demo.js"></script>
 <script src="client/js/techstack-auto-expense.js"></script>
+<script src="client/js/time-tracking.js"></script>
 <script src="client/js/onboarding.js"></script>
 <script src="client/js/ai-assistant.js"></script>
-<script src="client/pages/mobile-hub.js"></script>
+
+<!-- 7. Router + boot — always last -->
 <script src="client/js/app.js"></script>
 
 </body>
