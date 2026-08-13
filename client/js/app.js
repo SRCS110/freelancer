@@ -10,10 +10,10 @@ let STATE = {
   data: {
     clients: [], projects: [], finances: [], invoices: [],
     business_plan: null, user_settings: null,
-    bookmarks: [], tech_stack: [],
+    tech_stack: [],
     workflow_templates: [], workflow_steps: [], workflow_runs: [], workflow_run_steps: [],
     project_todos: [], project_todo_sections: [], client_documents: [],
-    brainstorm: [], teams: [], team_members: [], team_invites: [],
+    brainstorm: [], teams: [], team_members: [], team_invites: [], time_entries: [],
   },
   loading: true,
 };
@@ -24,7 +24,7 @@ async function loadAll() {
   try {
     const [
       clients, projects, finances, invoices,
-      bpList, settingsList, bookmarks, techStack,
+      bpList, settingsList, techStack,
       wfTemplates, wfSteps, wfRuns, wfRunSteps,
       projectTodos, todoSections, clientDocs,
       brainstormNotes, teams, teamMembers, teamInvites
@@ -35,7 +35,6 @@ async function loadAll() {
       db.list("invoices"),
       db.list("business_plan").catch(() => []),
       db.list("user_settings").catch(() => []),
-      db.list("bookmarks").catch(() => []),
       db.list("tech_stack").catch(() => []),
       db.list("workflow_templates").catch(() => []),
       db.list("workflow_steps").catch(() => []),
@@ -48,6 +47,7 @@ async function loadAll() {
       db.list("teams").catch(() => []),
       db.list("team_members").catch(() => []),
       db.list("team_invites").catch(() => []),
+      db.list("time_entries").catch(() => []),
     ]);
     STATE.data = {
       clients:               clients        || [],
@@ -56,7 +56,6 @@ async function loadAll() {
       invoices:              invoices       || [],
       business_plan:         (bpList || [])[0]       || null,
       user_settings:         (settingsList || [])[0]  || null,
-      bookmarks:             bookmarks      || [],
       tech_stack:            techStack      || [],
       workflow_templates:    wfTemplates    || [],
       workflow_steps:        wfSteps        || [],
@@ -69,6 +68,7 @@ async function loadAll() {
       teams:                 teams          || [],
       team_members:          teamMembers    || [],
       team_invites:          teamInvites    || [],
+      time_entries:          timeEntries    || [],
     };
   } catch (e) {
     console.error("loadAll error:", e.message);
@@ -120,7 +120,6 @@ const NAV_GROUPS = [
     { id: "invoices",      label: "Invoices",     icon: "◻" },
   ]},
   { label: "Tools", items: [
-    { id: "bookmarks",     label: "Bookmarks",    icon: "◉" },
     { id: "tech-stack",    label: "Tech Stack",   icon: "◳" },
     { id: "brainstorm",    label: "Brainstorm",   icon: "◆" },
   ]},
@@ -189,7 +188,7 @@ const MOBILE_TABS = [
   { id: "projects", icon: "◻", iconActive: "◼", label: "Projects", direct: "projects", pages: ["projects"] },
   // Overview is home — its tile grid reaches every remaining page
   { id: "overview", icon: "△", iconActive: "▲", label: "Overview", hub: "workspace",
-    pages: ["bookmarks","tech-stack","brainstorm","workflows","team","business-plan","settings"] },
+    pages: ["tech-stack","brainstorm","workflows","team","business-plan","settings"] },
 ];
 
 function mobileBarParts() {
@@ -334,7 +333,6 @@ function render() {
     else if (STATE.page === "invoices")                          content = invoicesHTML();
     else if (STATE.page === "business-plan")                     content = businessPlanHTML();
     else if (STATE.page === "settings")                          content = userSettingsHTML();
-    else if (STATE.page === "bookmarks")                         content = bookmarksHTML();
     else if (STATE.page === "tech-stack")                        content = techStackHTML();
     else if (STATE.page === "workflows")                         content = workflowsHTML();
     else if (STATE.page === "brainstorm")                        content = brainstormHTML();
@@ -418,6 +416,32 @@ function render() {
     }
     if (bottomTabs) tabsEl.innerHTML = bottomTabs;
   } catch(e) { console.warn("tabs inject:", e.message); }
+
+  // Running-timer pill — persists across pages, outside #app
+  try {
+    let pill = document.getElementById("timer-pill-wrap");
+    if (!pill) {
+      pill = document.createElement("div");
+      pill.id = "timer-pill-wrap";
+      document.body.appendChild(pill);
+    }
+    const t = window.runningEntry ? window.runningEntry() : null;
+    if (t && STATE.page !== "projects") {
+      const proj = (STATE.data.projects || []).find(p => p.id === t.project_id);
+      pill.innerHTML = `
+        <div class="timer-pill" onclick="openProject(${JSON.stringify(proj || {}).replace(/'/g, "&#39;")})">
+          <span class="timer-pill-dot"></span>
+          <span class="timer-pill-time" data-timer-clock>${fmtDur(entryMinutes(t))}</span>
+          <span class="timer-pill-name">${proj?.name || "Running"}</span>
+          <button class="timer-pill-stop" onclick="event.stopPropagation();stopTimer()">■</button>
+        </div>`;
+    } else {
+      pill.innerHTML = "";
+    }
+  } catch(e) { console.warn("timer pill:", e.message); }
+
+  try { if (window.initTimerTick) window.initTimerTick(); }
+  catch(e) { console.warn("timer tick:", e.message); }
 }
 
 // ── Nav group collapse ────────────────────────────────────────
@@ -477,11 +501,6 @@ window._sectionAdd = function(section) {
   <button class="modal-close" onclick="closeModal()">×</button>
 </div>
 <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px">
-  <button class="btn btn-ghost" style="justify-content:flex-start;gap:12px;padding:12px 16px"
-    onclick="closeModal();navigate('bookmarks');setTimeout(()=>openBmModal(null),100)">
-    <span style="font-family:'JetBrains Mono',monospace;font-size:14px">◉</span>
-    <span>New Bookmark</span>
-  </button>
   <button class="btn btn-ghost" style="justify-content:flex-start;gap:12px;padding:12px 16px"
     onclick="closeModal();navigate('tech-stack');setTimeout(()=>openStackModal(null),100)">
     <span style="font-family:'JetBrains Mono',monospace;font-size:14px">◳</span>
