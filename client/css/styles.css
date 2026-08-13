@@ -990,3 +990,51 @@ hr, .divider { border-color: var(--border); }
     flex-shrink: 0;
   }
 }
+
+/* ── Time tracking ──────────────────────────────────────────── */
+@keyframes fhpulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: .45; transform: scale(.82); }
+}
+.time-row:hover { background: color-mix(in srgb, var(--border) 32%, transparent); }
+
+/* Running-timer pill — fixed, so it follows you across pages */
+.timer-pill {
+  position: fixed;
+  z-index: 1100;
+  right: 16px;
+  bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+  display: flex; align-items: center; gap: 9px;
+  padding: 9px 14px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg-raised) 92%, transparent);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  box-shadow: 0 4px 18px var(--shadow);
+  cursor: pointer;
+  font-family: var(--font-mono);
+}
+@media (min-width: 641px) { .timer-pill { bottom: 20px; } }
+.timer-pill-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent);
+  animation: fhpulse 1.6s ease-in-out infinite;
+  flex-shrink: 0;
+}
+.timer-pill-time { font-size: 13px; font-weight: 700; color: var(--accent); }
+.timer-pill-name {
+  font-size: 11px; color: var(--text-muted);
+  max-width: 130px; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap;
+}
+.timer-pill-stop {
+  background: none; border: none; cursor: pointer;
+  color: var(--danger); font-size: 13px; padding: 0 0 0 3px;
+}
+
+@media (max-width: 640px) {
+  /* Time rows drop the money column at half width */
+  .time-row { grid-template-columns: 1fr auto !important; padding: 10px 14px !important; }
+  .time-row > span:last-child { display: none; }
+}
