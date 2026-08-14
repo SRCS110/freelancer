@@ -355,7 +355,6 @@ window.invoiceUnbilled = async function(projectId) {
       project_name:   proj?.name || null,
       amount:         Number(total.toFixed(2)),
       status:         "Draft",
-      issue_date:     new Date().toISOString().slice(0, 10),
       due_date:       due.toISOString().slice(0, 10),
     });
     const invId = Array.isArray(created) ? created[0]?.id : created?.id;
