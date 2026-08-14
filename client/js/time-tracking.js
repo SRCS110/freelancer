@@ -360,25 +360,20 @@ window.invoiceUnbilled = async function(projectId) {
     const invId = Array.isArray(created) ? created[0]?.id : created?.id;
     if (!invId) throw new Error("Invoice was not created");
 
-    // One line item summarising the hours
+    // One line item summarising the hours.
+    // `amount` is a generated column — the DB computes quantity × unit_price,
+    // so it must not be sent.
+    const lineItem = {
+      invoice_id:  invId,
+      description: `${proj?.name || "Project"} — ${hours.toFixed(2)} hrs`,
+      quantity:    Number(hours.toFixed(2)),
+      unit_price:  rate,
+    };
     try {
-      await db.insert("invoice_items", {
-        invoice_id:  invId,
-        description: `${proj?.name || "Project"} — ${hours.toFixed(2)} hrs`,
-        quantity:    Number(hours.toFixed(2)),
-        unit_price:  rate,
-        amount:      Number(total.toFixed(2)),
-        time_entry_ids: entries.map(t => t.id),
-      });
+      await db.insert("invoice_items", { ...lineItem, time_entry_ids: entries.map(t => t.id) });
     } catch (e) {
-      // Retry without the FK array if the column isn't there yet
-      await db.insert("invoice_items", {
-        invoice_id:  invId,
-        description: `${proj?.name || "Project"} — ${hours.toFixed(2)} hrs`,
-        quantity:    Number(hours.toFixed(2)),
-        unit_price:  rate,
-        amount:      Number(total.toFixed(2)),
-      });
+      // time_entry_ids only exists after migration 6 — retry without it
+      await db.insert("invoice_items", lineItem);
     }
 
     // Mark the hours as invoiced so they can't be billed twice
