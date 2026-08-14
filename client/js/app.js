@@ -27,7 +27,7 @@ async function loadAll() {
       bpList, settingsList, techStack,
       wfTemplates, wfSteps, wfRuns, wfRunSteps,
       projectTodos, todoSections, clientDocs,
-      brainstormNotes, teams, teamMembers, teamInvites
+      brainstormNotes, teams, teamMembers, teamInvites, timeEntries
     ] = await Promise.all([
       db.list("clients"),
       db.list("projects"),
