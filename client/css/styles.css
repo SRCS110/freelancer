@@ -21,6 +21,7 @@
   --accent-fg: #2A1006;
   --danger:    #FF6B5E;
   --warning:   #e8b667;
+  --money-pos: #7FE3B8;
   --shadow:    rgba(0,0,0,0.32);
 
   /* Shape */
@@ -47,6 +48,7 @@ body.light {
   --accent-fg: #FFFFFF;
   --danger:    #C2503F;
   --warning:   #b57d2a;
+  --money-pos: #12886A;
   --shadow:    rgba(70,45,30,0.10);
 }
 

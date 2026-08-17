@@ -131,24 +131,29 @@ function _workspaceSnapshot() {
   if (alerts) alerts = `<div style="margin-bottom:14px">${alerts}</div>`;
 
   // ── Money stats ─────────────────────────────────────────────
+  const netPositive = (income - expense) >= 0;
   const money = `
   <div style="display:flex;gap:8px;margin-bottom:10px">
-    ${_hubStat("Income (mo)", usd(income), "var(--accent)")}
+    ${_hubStat("Income (mo)", usd(income), "var(--money-pos)")}
     ${_hubStat("Expenses (mo)", usd(expense), "var(--danger)")}
-    ${_hubStat("Net (mo)", usd(income - expense))}
+    ${_hubStat("Net (mo)", usd(income - expense), netPositive ? "var(--money-pos)" : "var(--danger)")}
   </div>`;
 
   // ── Jump-to tiles ───────────────────────────────────────────
+  // Row 1: Clients + Projects (workspace) — Stack fills the 3rd slot.
+  // Row 2: Finances + Invoices (money) sit together — Workflows fills the 3rd slot.
+  // Row 3: Notes + Team.
   const tiles = _hubTiles([
     { page: "clients",    icon: "◎", label: "Clients",   badge: `${clients.length}` },
     { page: "projects",   icon: "◫", label: "Projects",  badge: `${active.length} active` },
-    { page: "invoices",   icon: "◻", label: "Invoices",
-      badge: overdue.length ? `${overdue.length} overdue` : `${unpaid.length} unpaid`,
-      badgeColor: overdue.length ? "var(--danger)" : "var(--text-muted)" },
-    { page: "finances",   icon: "◇", label: "Finances",  badge: usd(income - expense) },
     { page: "tech-stack", icon: "◳", label: "Stack",
       badge: usd(stack.filter(t => t.cycle === "monthly")
                       .reduce((a, t) => a + Number(t.amount || 0), 0)) + "/mo" },
+    { page: "finances",   icon: "◇", label: "Finances",  badge: usd(income - expense),
+      badgeColor: netPositive ? "var(--money-pos)" : "var(--danger)" },
+    { page: "invoices",   icon: "◻", label: "Invoices",
+      badge: overdue.length ? `${overdue.length} overdue` : `${unpaid.length} unpaid`,
+      badgeColor: overdue.length ? "var(--danger)" : "var(--text-muted)" },
     { page: "workflows",  icon: "◳", label: "Workflows", badge: `${runs.length} active` },
     { page: "brainstorm", icon: "◆", label: "Notes",     badge: `${notes.length}` },
     { page: "team",       icon: "◎", label: "Team",      badge: `${(d.team_members || []).length || 1}` },

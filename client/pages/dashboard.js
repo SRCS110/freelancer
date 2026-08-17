@@ -44,7 +44,7 @@ function dashboardHTML() {
   const overdue = invoices.filter(i => i.status === "Overdue").length;
 
   const stats = [
-    { label: "Revenue",         val: usd(rev),  icon: "◇", color: "#10b981", sub: DASH_PERIODS[period] },
+    { label: "Revenue",         val: usd(rev),  icon: "◇", color: "var(--money-pos)", sub: DASH_PERIODS[period] },
     { label: "Expenses",        val: usd(exp),  icon: "◈", color: "#f59e0b", sub: DASH_PERIODS[period] },
     { label: "Outstanding",     val: usd(unpd), icon: "◻", color: "#f43f5e", sub: `${invoices.filter(i => i.status !== "Paid" && i.status !== "Void").length} unpaid` },
     { label: "Active Projects", val: actv,      icon: "◫", color: "#6366f1", sub: `${projects.length} total` },
@@ -99,7 +99,7 @@ ${overdue > 0 ? `
     <div class="section-title" style="margin-bottom:16px">Tax Estimate</div>
     <div style="margin-bottom:12px">
       <div style="font-size:12px;color:var(--text-muted);margin-bottom:3px">Net Profit (${DASH_PERIODS[period]})</div>
-      <div style="font-size:22px;font-weight:700;color:var(--text);font-family:'Space Grotesk',sans-serif">${usd(rev - exp)}</div>
+      <div style="font-size:22px;font-weight:700;color:${(rev - exp) >= 0 ? "var(--money-pos)" : "var(--danger)"};font-family:var(--font-sans)">${usd(rev - exp)}</div>
     </div>
     <div style="margin-bottom:12px">
       <div style="font-size:12px;color:var(--text-muted);margin-bottom:3px">Estimated Tax (${STATE.data.user_settings?.tax_rate ?? 25}%)</div>

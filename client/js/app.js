@@ -184,8 +184,8 @@ function sidebarHTML() {
 const MOBILE_TABS = [
   // direct: straight to a page.  hub: opens a hub id from HUB_CONFIG.
   { id: "clients",  icon: "○", iconActive: "●", label: "Clients",  direct: "clients",  pages: ["clients"] },
-  { id: "money",    icon: "◇", iconActive: "◆", label: "Money",    direct: "finances", pages: ["finances","invoices"] },
   { id: "projects", icon: "◻", iconActive: "◼", label: "Projects", direct: "projects", pages: ["projects"] },
+  { id: "money",    icon: "◇", iconActive: "◆", label: "Money",    direct: "finances", pages: ["finances","invoices"] },
   // Overview is home — its tile grid reaches every remaining page
   { id: "overview", icon: "△", iconActive: "▲", label: "Overview", hub: "workspace",
     pages: ["tech-stack","brainstorm","workflows","team","business-plan","settings"] },

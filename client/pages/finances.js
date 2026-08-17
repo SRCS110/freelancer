@@ -129,10 +129,10 @@ ${(() => {
 
 <div class="fin-summary">
   ${[
-    { label: "Total Income",   val: income,   color: "var(--accent)", icon: "📈" },
+    { label: "Total Income",   val: income,   color: "var(--money-pos)", icon: "📈" },
     { label: "Total Expenses", val: expenses, color: "var(--danger)", icon: "📉" },
     { label: "Net Profit",     val: income - expenses,
-      color: (income - expenses) >= 0 ? "var(--text)" : "var(--danger)", icon: "◫" },
+      color: (income - expenses) >= 0 ? "var(--money-pos)" : "var(--danger)", icon: "◫" },
   ].map(s => `
   <div class="card">
     <div style="font-size:22px;margin-bottom:8px">${s.icon}</div>
@@ -159,7 +159,7 @@ ${(() => {
       <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--bg);border-radius:10px;border:1px solid var(--border)">
         <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-muted)">${cat}</span>
         <div style="display:flex;gap:12px;align-items:center">
-          ${income > 0  ? `<span style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:var(--accent)">+${usd(income)}</span>`  : ""}
+          ${income > 0  ? `<span style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:var(--money-pos)">+${usd(income)}</span>`  : ""}
           ${expense > 0 ? `<span style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:var(--danger)">-${usd(expense)}</span>` : ""}
         </div>
       </div>`).join("")}
@@ -170,7 +170,7 @@ ${(() => {
     <div class="section-title" style="margin-bottom:14px">Tax Estimate (${STATE.data.user_settings?.tax_rate ?? 25}%)</div>
     <div style="margin-bottom:12px">
       <div style="font-size:12px;color:var(--text-muted);margin-bottom:3px">Net Profit</div>
-      <div style="font-size:22px;font-weight:700;color:var(--text);font-family:var(--font-sans)">${usd(income - expenses)}</div>
+      <div style="font-size:22px;font-weight:700;color:${(income - expenses) >= 0 ? "var(--money-pos)" : "var(--danger)"};font-family:var(--font-sans)">${usd(income - expenses)}</div>
     </div>
     <div style="margin-bottom:12px">
       <div style="font-size:12px;color:var(--text-muted);margin-bottom:3px">Estimated Tax</div>
@@ -194,7 +194,7 @@ ${Object.keys(byProject).length > 0 ? `
     ${Object.values(byProject).sort((a,b) => b.total - a.total).map(p => `
     <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--bg);border-radius:8px;border:1px solid var(--border)">
       <span style="font-size:13px;color:var(--text);font-weight:500">${p.name}</span>
-      <span style="font-weight:700;color:var(--accent);font-family:'JetBrains Mono',monospace">${usd(p.total)}</span>
+      <span style="font-weight:700;color:var(--money-pos);font-family:'JetBrains Mono',monospace">${usd(p.total)}</span>
     </div>`).join("")}
   </div>
 </div>` : ""}
@@ -225,9 +225,9 @@ ${Object.keys(byProject).length > 0 ? `
             <td data-label="Category"><span style="font-size:11px;color:var(--accent)">${f.category}</span></td>
             <td style="color:var(--text-muted);font-size:12px">${proj?.name || "—"}</td>
             <td>${f.type === "income"
-              ? `<span class="badge" style="background:color-mix(in srgb,var(--accent) 15%,transparent);color:var(--accent)">income</span>`
+              ? `<span class="badge" style="background:color-mix(in srgb,var(--money-pos) 15%,transparent);color:var(--money-pos)">income</span>`
               : `<span class="badge" style="background:color-mix(in srgb,var(--danger) 12%,transparent);color:var(--danger)">expense</span>`}</td>
-            <td style="font-weight:700;color:${f.type === "income" ? "#10b981" : "#f43f5e"}">
+            <td style="font-weight:700;color:${f.type === "income" ? "var(--money-pos)" : "var(--danger)"}">
               ${f.type === "expense" ? "-" : "+"}${usd(f.amount)}
             </td>
             <td><div class="btn-row">
