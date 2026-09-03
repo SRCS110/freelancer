@@ -131,7 +131,7 @@ window.updateInvStatus = async function(id, status) {
 
   await loadAll();
 };
-window.deleteInv       = async function(id) { if (!confirm("Delete this invoice?")) return; await db.delete("invoices", id); loadAll(); };
+window.deleteInv       = async function(id) { if (!confirm("Delete this invoice?")) return; await db.delete("invoices", id); if (STATE.openInvoice?.id === id) STATE.openInvoice = null; loadAll(); };
 
 // ── Print / PDF export ─────────────────────────────────────────
 window.emailInvoice = async function(id) {

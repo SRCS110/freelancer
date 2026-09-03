@@ -421,6 +421,7 @@ window.deleteClient = async function(id) {
   if (!confirm("Delete this client? Their projects and invoices will be unlinked.")) return;
   await db.delete("clients", id);
   window._openClientId = null;
+  window._deskSelectedClientId = null;
   loadAll();
 };
 
@@ -580,6 +581,7 @@ function _clientDetailPanelHTML(c) {
     ${c.email ? `<a href="mailto:${c.email}" class="btn btn-ghost" style="text-decoration:none">Email</a>` : ""}
     <button class="btn btn-primary" onclick="navigate('finances');setTimeout(()=>openInvModal(null),100)">New invoice</button>
     <button class="btn btn-ghost" onclick="openClientModal('${c.id}')">Edit</button>
+    <button class="btn btn-danger btn-sm" onclick="deleteClient('${c.id}')">Delete</button>
   </div>
 </div>
 

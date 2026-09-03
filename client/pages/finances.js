@@ -456,6 +456,7 @@ ${items.length ? `
 <div style="display:flex;gap:8px;margin-bottom:20px">
   ${inv.status !== "Paid" && inv.status !== "Void" ? `<button class="btn btn-ghost" style="flex:1" onclick="updateInvStatus('${inv.id}','Paid')">✓ Mark paid</button>` : ""}
   <button class="btn btn-ghost" style="flex:1" onclick="openInvModal('${inv.id}')">Edit</button>
+  <button class="btn btn-danger btn-sm" onclick="deleteInv('${inv.id}')">Delete</button>
 </div>
 
 <div style="background:var(--bg-raised);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:18px">

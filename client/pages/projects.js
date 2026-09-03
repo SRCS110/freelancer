@@ -262,6 +262,7 @@ window.deleteProject = async function(id) {
   if (!confirm("Delete this project?")) return;
   await db.delete("projects", id);
   STATE.openProject = null; STATE.page = "projects";
+  window._deskSelectedProjectId = null;
   loadAll();
 };
 
@@ -307,10 +308,9 @@ window.projectsListHTML = projectsListHTML;
 
 // ============================================================
 //  DESKTOP — Projects
-//  3-column kanban (Active / Review / Complete) + a right rail
-//  showing the selected project's real hours, tasks and timer.
-//  Rail selection is local UI state — it does not navigate away,
-//  so "open full file" still routes through openProject().
+//  List rail + detail panel, matching the Clients desktop layout:
+//  projects on the left, full detail (progress, chips, tasks,
+//  time bars, timer/bill actions) in the center.
 // ============================================================
 function _projDeskUnbilled(p) {
   const entries = (STATE.data.time_entries || []).filter(t => t.project_id === p.id);
@@ -334,99 +334,122 @@ function _projDeskWeekBars(pid) {
   return days;
 }
 
+function _projDeskRowHTML(p, isSelected) {
+  const { unbilled } = _projDeskUnbilled(p);
+  const running = typeof runningEntry === "function" ? runningEntry() : null;
+  const isRunningHere = running && running.project_id === p.id;
+  return `
+  <div class="desk-list-row${isSelected ? " active" : ""}" onclick="window._deskSelectedProjectId='${p.id}';render()">
+    <div class="desk-list-row-title">${p.name}</div>
+    <div class="desk-list-row-sub" style="color:${isRunningHere ? "var(--money-pos)" : unbilled > 0 ? "var(--warning)" : "var(--text-muted)"}">
+      ${isRunningHere ? "◆ timer running" : unbilled > 0 ? usd(unbilled) + " unbilled" : (p.client_name || p.status)}
+    </div>
+  </div>`;
+}
+
 function projectsDesktopHTML() {
   const projects = STATE.data.projects || [];
-  const running  = typeof runningEntry === "function" ? runningEntry() : null;
-  const cols = [
-    { label: "In progress", statuses: ["Active"] },
-    { label: "In review",   statuses: ["Review"] },
-    { label: "Delivered",   statuses: ["Complete"] },
-  ];
-  const otherCt = projects.filter(p => ["Lead","Cancelled"].includes(p.status)).length;
-
-  const kanbanProjects = projects.filter(p => ["Active","Review","Complete"].includes(p.status));
-  const totalUnbilled = kanbanProjects.reduce((s,p)=> s + _projDeskUnbilled(p).unbilled, 0);
+  const active = projects.filter(p => p.status === "Active").length;
+  const totalUnbilled = projects.reduce((s,p)=> s + _projDeskUnbilled(p).unbilled, 0);
   const monthMin = (STATE.data.time_entries || []).filter(t => {
     const d = t.started_at?.slice(0,7); const now = new Date().toISOString().slice(0,7);
     return d === now;
   }).reduce((s,t)=>s+entryMinutes(t),0);
 
-  const selectedId = window._deskSelectedProjectId || kanbanProjects.find(p=>p.status==="Active")?.id || kanbanProjects[0]?.id;
+  const selectedId = window._deskSelectedProjectId || projects.find(p=>p.status==="Active")?.id || projects[0]?.id;
   const selected = projects.find(p => p.id === selectedId);
 
   return `
 <div class="page-section-header">
   <div>
     <div class="page-title">Projects</div>
-    <div class="page-sub">${kanbanProjects.filter(p=>p.status==="Active").length} active · ${(monthMin/60).toFixed(0)} hours logged this month · ${usd(totalUnbilled)} unbilled${otherCt ? ` · ${otherCt} in leads/cancelled` : ""}</div>
+    <div class="page-sub">${active} active · ${(monthMin/60).toFixed(0)} hours logged this month · ${usd(totalUnbilled)} unbilled</div>
   </div>
   <button class="btn btn-primary" onclick="openProjectModal(null)">+ New Project</button>
 </div>
 
 <div class="desk-shell">
-  <div class="desk-col-main">
-    <div class="desk-kanban">
-      ${cols.map(col => {
-        const items = kanbanProjects.filter(p => col.statuses.includes(p.status));
-        return `
-      <div class="desk-kanban-col">
-        <div class="desk-kanban-label"><span>${col.label}</span><span>${items.length}</span></div>
-        ${items.length === 0 ? `<div style="font-size:12px;color:var(--text-muted);padding:8px 2px">nothing here.</div>` : items.map(p => {
-          const { hours, unbilled } = _projDeskUnbilled(p);
-          const budget = Number(p.budget_hours) || 0;
-          const pct = budget > 0 ? Math.min(100, Math.round((hours/budget)*100)) : null;
-          const isSel = p.id === selectedId;
-          const isRunningHere = running && running.project_id === p.id;
-          return `
-        <div class="desk-mini-card" style="cursor:pointer;${isSel ? 'border-color:var(--accent)' : ''}" onclick="window._deskSelectedProjectId='${p.id}';render()">
-          <div style="font-size:14px;font-weight:700;color:var(--text)">${p.name}</div>
-          <div style="font-size:12.5px;color:var(--text-muted);margin:3px 0 11px">${p.client_name || "—"}</div>
-          ${pct !== null ? `<div class="desk-progress" style="margin-bottom:11px"><span style="width:${pct}%"></span></div>` : ""}
-          <div style="display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:11px;color:var(--text-muted)">
-            <span>${budget>0 ? `${hours.toFixed(0)}/${budget} hr` : `${hours.toFixed(1)} hr`}</span>
-            ${unbilled>0 ? `<span style="color:var(--warning)">${usd(unbilled)} unbilled</span>` : ""}
-          </div>
-          ${isRunningHere ? `<div style="display:flex;align-items:center;gap:7px;margin-top:11px;padding-top:11px;border-top:1px solid var(--border)"><span style="width:6px;height:6px;border-radius:999px;background:var(--money-pos);animation:fhpulse 1.8s ease-in-out infinite"></span><span style="font-family:var(--font-mono);font-size:11px;color:var(--money-pos)">timer running · ${fmtDur(entryMinutes(running))}</span></div>` : ""}
-        </div>`;
-        }).join("")}
-      </div>`;
-      }).join("")}
+  <div class="desk-col-list">
+    <div style="padding:0 4px 12px">
+      <input id="project-search" placeholder="search projects…" oninput="filterProjectsDesktop(this.value)"/>
+    </div>
+    <div id="project-list-container">
+      ${projects.length === 0
+        ? `<div style="font-size:12px;color:var(--text-muted);padding:8px 4px">no projects yet.</div>`
+        : projects.map(p => _projDeskRowHTML(p, p.id === selectedId)).join("")}
     </div>
   </div>
 
-  ${selected ? `
-  <div class="desk-rail">
-    <div style="font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--accent);margin-bottom:7px">${selected.client_name || "No client"}</div>
-    <div style="font-family:var(--font-serif);font-size:23px;line-height:1.1;margin-bottom:14px">${selected.name}</div>
-    ${(() => {
-      const { hours, unbilled } = _projDeskUnbilled(selected);
-      const budget = Number(selected.budget_hours) || 0;
-      const pct = budget > 0 ? Math.min(100, Math.round((hours/budget)*100)) : null;
-      return `
-    ${pct !== null ? `<div style="display:flex;align-items:center;gap:11px;margin-bottom:20px"><div class="desk-progress" style="flex:1"><span style="width:${pct}%"></span></div><div style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted)">${pct}%</div></div>` : ""}
-    <div class="desk-chip-row" style="margin-bottom:22px">
-      <div class="desk-chip"><div class="desk-chip-label">Hours</div><div class="desk-chip-val">${budget>0 ? `${hours.toFixed(0)}/${budget}` : hours.toFixed(1)}</div></div>
-      <div class="desk-chip"><div class="desk-chip-label">Unbilled</div><div class="desk-chip-val" style="color:var(--warning)">${usd(unbilled)}</div></div>
-    </div>`;
-    })()}
+  <div class="desk-col-main">
+    ${selected ? _projDeskDetailHTML(selected) : `<div class="empty"><div class="empty-text">select a project.</div></div>`}
+  </div>
+</div>`;
+}
+window.projectsDesktopHTML = projectsDesktopHTML;
 
+window.filterProjectsDesktop = function(q) {
+  const term = q.toLowerCase();
+  const container = document.getElementById("project-list-container");
+  if (!container) return;
+  const filtered = (STATE.data.projects || []).filter(p =>
+    !term || p.name?.toLowerCase().includes(term) || p.client_name?.toLowerCase().includes(term) || p.status?.toLowerCase().includes(term)
+  );
+  if (filtered.length === 0) {
+    container.innerHTML = `<div style="font-size:12px;color:var(--text-muted);padding:8px 4px">no projects match "${q}"</div>`;
+    return;
+  }
+  const selectedId = window._deskSelectedProjectId;
+  container.innerHTML = filtered.map(p => _projDeskRowHTML(p, p.id === selectedId)).join("");
+};
+
+function _projDeskDetailHTML(selected) {
+  const running = typeof runningEntry === "function" ? runningEntry() : null;
+  const { hours, unbilled } = _projDeskUnbilled(selected);
+  const budget = Number(selected.budget_hours) || 0;
+  const pct = budget > 0 ? Math.min(100, Math.round((hours/budget)*100)) : null;
+  const todos = _projectTodos(selected.id);
+
+  return `
+<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:20px">
+  <div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="font-family:var(--font-serif);font-size:23px;line-height:1.1">${selected.name}</div>
+      ${badge(selected.status)}
+    </div>
+    <div style="font-size:12.5px;color:var(--text-muted);margin-top:5px">${[selected.client_name, selected.deadline ? "due " + fmtDate(selected.deadline) : null].filter(Boolean).join(" · ") || "No client"}</div>
+  </div>
+  <div class="btn-row" style="flex-shrink:0">
+    <button class="btn btn-ghost" onclick='openProject(${JSON.stringify(selected).replace(/'/g,"&#39;")})'>Open full file</button>
+    <button class="btn btn-ghost" onclick="openProjectModal('${selected.id}')">Edit</button>
+    <button class="btn btn-danger btn-sm" onclick="deleteProject('${selected.id}')">Delete</button>
+  </div>
+</div>
+
+${pct !== null ? `<div style="display:flex;align-items:center;gap:11px;margin-bottom:20px"><div class="desk-progress" style="flex:1"><span style="width:${pct}%"></span></div><div style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted)">${pct}%</div></div>` : ""}
+<div class="desk-chip-row" style="margin-bottom:24px">
+  <div class="desk-chip"><div class="desk-chip-label">Hours</div><div class="desk-chip-val">${budget>0 ? `${hours.toFixed(0)}/${budget}` : hours.toFixed(1)}</div></div>
+  <div class="desk-chip"><div class="desk-chip-label">Unbilled</div><div class="desk-chip-val" style="color:var(--warning)">${usd(unbilled)}</div></div>
+  ${selected.budget ? `<div class="desk-chip"><div class="desk-chip-label">Budget</div><div class="desk-chip-val">${usd(selected.budget)}</div></div>` : ""}
+</div>
+
+<div class="desk-shell">
+  <div class="desk-col-main">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:11px">
       <div style="font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted)">Tasks</div>
-      <span onclick='openProject(${JSON.stringify(selected).replace(/'/g,"&#39;")})' style="font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--accent);cursor:pointer">open file →</span>
     </div>
-    ${(() => {
-      const todos = _projectTodos(selected.id).slice(0, 6);
-      if (!todos.length) return `<div style="font-size:12px;color:var(--text-muted);margin-bottom:22px">no tasks yet.</div>`;
-      return `<div style="background:var(--bg-raised);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:22px">
-      ${todos.map(t => `
+    ${todos.length === 0
+      ? `<div style="font-size:12px;color:var(--text-muted);margin-bottom:22px">no tasks yet.</div>`
+      : `<div style="background:var(--bg-raised);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:24px">
+      ${todos.slice(0,8).map(t => `
       <div style="display:flex;align-items:center;gap:11px;padding:12px 14px;border-bottom:1px solid var(--border)">
         <span onclick="toggleTodo('${t.id}',${t.completed})" style="width:15px;height:15px;border-radius:5px;flex-shrink:0;cursor:pointer;border:1px solid ${t.completed?'transparent':'var(--border-2)'};background:${t.completed?'var(--border-2)':'transparent'};display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--bg)">${t.completed?'✓':''}</span>
         <span style="flex:1;font-size:13px;${t.completed?'color:var(--text-muted);text-decoration:line-through':''}">${t.title}</span>
         ${t.due_date ? `<span style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted)">${fmtDate(t.due_date)}</span>` : ""}
       </div>`).join("")}
-      </div>`;
-    })()}
+      </div>`}
+  </div>
 
+  <div class="desk-rail narrow">
     <div style="font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:11px">Time this week</div>
     <div class="card" style="margin-bottom:22px">
       <div class="desk-bars">
@@ -443,14 +466,11 @@ function projectsDesktopHTML() {
             ? `<button class="btn btn-primary" style="flex:1" onclick="resumeTimer('${running.id}')">Resume timer</button>`
             : `<button class="btn btn-ghost" style="flex:1" onclick="pauseTimer('${running.id}')">Pause timer</button>`)
         : `<button class="btn btn-ghost" style="flex:1" onclick="startTimer('${selected.id}')">Start timer</button>`}
-      ${_projDeskUnbilled(selected).unbilled > 0
-        ? `<button class="btn btn-primary" style="flex:1" onclick="invoiceUnbilled('${selected.id}')">Bill ${usd(_projDeskUnbilled(selected).unbilled)}</button>`
-        : ""}
     </div>
-  </div>` : ""}
+    ${unbilled > 0 ? `<button class="btn btn-primary" style="width:100%;margin-top:8px" onclick="invoiceUnbilled('${selected.id}')">Bill ${usd(unbilled)}</button>` : ""}
+  </div>
 </div>`;
 }
-window.projectsDesktopHTML = projectsDesktopHTML;
 
 // ── Todo helpers ──────────────────────────────────────────────
 function _projectTodos(pid) {

@@ -346,6 +346,7 @@ window.saveWfTemplate = async function(id) {
 window.deleteWfTemplate = async function(id) {
   if (!confirm("Delete this template and all its steps?")) return;
   await db.delete("workflow_templates", id);
+  if (window._wfDeskSelection?.type === "template" && window._wfDeskSelection.id === id) window._wfDeskSelection = null;
   loadAll();
 };
 
@@ -506,6 +507,7 @@ window.saveWfRun = async function() {
     // Navigate to run detail
     window._wfRunId = runId;
     window._wfView  = "run";
+    window._wfDeskSelection = {type:"run", id: runId};
     render();
   } catch(e) { alert(e.message); btn.disabled = false; btn.textContent = "start run"; }
 };
@@ -537,6 +539,7 @@ window.deleteWfRun = async function(id) {
   if (!confirm("Delete this run?")) return;
   await db.delete("workflow_runs", id);
   window._wfView = "overview";
+  if (window._wfDeskSelection?.type === "run" && window._wfDeskSelection.id === id) window._wfDeskSelection = null;
   loadAll();
 };
 
@@ -560,10 +563,9 @@ function workflowsDesktopHTML() {
   const allRuns    = STATE.data.workflow_runs || [];
   const activeRuns = allRuns.filter(r => r.status === "active");
 
-  const runId = window._wfRunId;
-  const selectedRun = runId ? allRuns.find(r => r.id === runId) : (activeRuns[0] || null);
-  const templateId = window._wfTemplateId;
-  const selectedTemplate = !selectedRun && templateId ? templates.find(t => t.id === templateId) : null;
+  const sel = window._wfDeskSelection || (activeRuns[0] ? {type:"run", id:activeRuns[0].id} : null);
+  const selectedRun = sel && sel.type === "run" ? allRuns.find(r => r.id === sel.id) : null;
+  const selectedTemplate = sel && sel.type === "template" ? templates.find(t => t.id === sel.id) : null;
 
   return `
 <div class="page-section-header">
@@ -586,7 +588,7 @@ function workflowsDesktopHTML() {
         const steps = (STATE.data.workflow_run_steps||[]).filter(s=>s.run_id===r.id);
         const done = steps.filter(s=>s.completed).length;
         return `
-    <div class="desk-list-row${r.id===selectedRun?.id?" active":""}" onclick="window._wfRunId='${r.id}';window._wfTemplateId=null;render()">
+    <div class="desk-list-row${r.id===selectedRun?.id?" active":""}" onclick="window._wfDeskSelection={type:'run',id:'${r.id}'};render()">
       <div class="desk-list-row-title">${r.name}</div>
       <div class="desk-list-row-sub">${[r.client_name, r.project_name].filter(Boolean).join(" · ") || "stand-alone"} · step ${done+1}/${steps.length||1}</div>
     </div>`;
@@ -599,7 +601,7 @@ function workflowsDesktopHTML() {
         const steps = (STATE.data.workflow_steps||[]).filter(s=>s.template_id===t.id);
         const used = allRuns.filter(r=>r.template_id===t.id).length;
         return `
-    <div class="desk-list-row${t.id===selectedTemplate?.id?" active":""}" onclick="window._wfTemplateId='${t.id}';window._wfRunId=null;render()">
+    <div class="desk-list-row${t.id===selectedTemplate?.id?" active":""}" onclick="window._wfDeskSelection={type:'template',id:'${t.id}'};render()">
       <div class="desk-list-row-title">${t.name}</div>
       <div class="desk-list-row-sub">${steps.length} steps · used ${used} time${used!==1?"s":""}</div>
     </div>`;
@@ -629,6 +631,7 @@ function _wfDeskTemplateHTML(t) {
   <div class="btn-row">
     <button class="btn btn-ghost" onclick="openWfTemplateModal('${t.id}')">Edit</button>
     <button class="btn btn-primary" onclick="openWfRunModal('${t.id}')">▶ Start run</button>
+    <button class="btn btn-danger btn-sm" onclick="deleteWfTemplate('${t.id}')">Delete</button>
   </div>
 </div>
 ${t.description ? `<div style="font-size:13px;color:var(--text-muted);margin-bottom:20px">${t.description}</div>` : ""}
@@ -640,7 +643,12 @@ ${t.description ? `<div style="font-size:13px;color:var(--text-muted);margin-bot
       <div style="font-size:13.5px;font-weight:600">${s.title}</div>
       ${s.description ? `<div style="font-size:12px;color:var(--text-muted);margin-top:3px">${s.description}</div>` : ""}
     </div>
+    <div style="display:flex;gap:6px;flex-shrink:0">
+      <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:3px 8px" onclick="openStepModal('${t.id}','${s.id}')">Edit</button>
+      <button class="btn btn-danger btn-sm" style="font-size:11px;padding:3px 8px" onclick="deleteStep('${s.id}')">×</button>
+    </div>
   </div>`).join("")}
+  <button class="btn btn-ghost" style="width:100%;border-style:dashed" onclick="openStepModal('${t.id}',null)">+ add step</button>
 </div>`;
 }
 

@@ -162,6 +162,36 @@ button { font-family: 'Inter', sans-serif; cursor: pointer; border: none; border
   font-size: 12px; border-radius: 3px;
   font-family: 'JetBrains Mono', monospace;
 }
+.theme-toggle {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 2px; margin-bottom: 8px;
+  cursor: pointer;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; color: var(--text-muted);
+}
+.theme-toggle:hover { color: var(--text); }
+.theme-toggle-track {
+  position: relative;
+  width: 34px; height: 18px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-2);
+  border-radius: 999px;
+  flex-shrink: 0;
+  transition: background .15s ease, border-color .15s ease;
+}
+.theme-toggle-track.on { background: var(--accent); border-color: var(--accent); }
+.theme-toggle-thumb {
+  position: absolute;
+  top: 1px; left: 1px;
+  width: 14px; height: 14px;
+  border-radius: 999px;
+  background: var(--text-muted);
+  transition: transform .15s ease, background .15s ease;
+}
+.theme-toggle-track.on .theme-toggle-thumb {
+  transform: translateX(16px);
+  background: var(--accent-fg);
+}
 .logout-btn:hover { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 40%, transparent); }
 
 /* ── Main content ────────────────────────────────────────────── */

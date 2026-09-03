@@ -333,10 +333,10 @@ function userSettingsDesktopHTML() {
 
 <div class="desk-shell">
   <div class="desk-col-list">
-    <div class="desk-list-row active" style="cursor:default">Profile</div>
-    <div class="desk-list-row" style="cursor:default;color:var(--text-muted)">Invoice details</div>
-    <div class="desk-list-row" style="cursor:default;color:var(--text-muted)">Preferences</div>
-    <div class="desk-list-row" style="cursor:default;color:var(--text-muted)">Security</div>
+    <div class="desk-list-row active" data-nav-row onclick="_scrollToSettingsSection(this,'us-sec-profile')">Profile</div>
+    <div class="desk-list-row" data-nav-row onclick="_scrollToSettingsSection(this,'us-sec-invoice')">Invoice details</div>
+    <div class="desk-list-row" data-nav-row onclick="_scrollToSettingsSection(this,'us-sec-prefs')">Preferences</div>
+    <div class="desk-list-row" data-nav-row onclick="_scrollToSettingsSection(this,'us-sec-security')">Security</div>
     <div class="desk-list-row" onclick="navigate('business-plan')" style="display:flex;align-items:center;gap:9px;margin-top:8px">
       <span style="font-family:var(--font-mono);font-size:12px;color:var(--accent)">◈</span><span style="flex:1;font-size:12.5px;font-weight:600">Business plan</span><span style="color:var(--text-muted)">→</span>
     </div>
@@ -344,7 +344,7 @@ function userSettingsDesktopHTML() {
 
   <div class="desk-col-main" style="max-width:620px">
     <!-- Profile -->
-    <div style="display:flex;align-items:center;gap:9px;margin-bottom:16px">
+    <div id="us-sec-profile" style="display:flex;align-items:center;gap:9px;margin-bottom:16px;scroll-margin-top:20px">
       <span style="font-family:var(--font-mono);font-size:14px;color:var(--accent)">◎</span>
       <span style="font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted)">Profile</span>
     </div>
@@ -359,7 +359,7 @@ function userSettingsDesktopHTML() {
     <div class="form-group"><label class="form-label">Business Name</label><input id="us-business-name" value="${s.business_name || ""}" placeholder="Acme Freelance Co."/></div>
 
     <!-- Invoice details -->
-    <div style="display:flex;align-items:center;gap:9px;margin:24px 0 16px;padding-top:20px;border-top:1px solid var(--border)">
+    <div id="us-sec-invoice" style="display:flex;align-items:center;gap:9px;margin:24px 0 16px;padding-top:20px;border-top:1px solid var(--border);scroll-margin-top:20px">
       <span style="font-family:var(--font-mono);font-size:14px;color:var(--accent)">◻</span>
       <span style="font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted)">Invoice details</span>
     </div>
@@ -376,7 +376,7 @@ function userSettingsDesktopHTML() {
     <div class="form-group"><label class="form-label">Business Email</label><input id="us-business-email" value="${s.business_email || ""}" placeholder="billing@yourbusiness.com"/></div>
 
     <!-- Preferences -->
-    <div style="display:flex;align-items:center;gap:9px;margin:24px 0 16px;padding-top:20px;border-top:1px solid var(--border)">
+    <div id="us-sec-prefs" style="display:flex;align-items:center;gap:9px;margin:24px 0 16px;padding-top:20px;border-top:1px solid var(--border);scroll-margin-top:20px">
       <span style="font-family:var(--font-mono);font-size:14px;color:var(--accent)">◳</span>
       <span style="font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted)">Preferences</span>
     </div>
@@ -401,7 +401,7 @@ function userSettingsDesktopHTML() {
     <button class="btn btn-primary" id="us-save-btn" onclick="saveUserSettings()" style="margin-bottom:26px">Save Settings</button>
 
     <!-- Security -->
-    <div style="display:flex;align-items:center;gap:9px;margin-bottom:16px;padding-top:20px;border-top:1px solid var(--border)">
+    <div id="us-sec-security" style="display:flex;align-items:center;gap:9px;margin-bottom:16px;padding-top:20px;border-top:1px solid var(--border);scroll-margin-top:20px">
       <span style="font-family:var(--font-mono);font-size:14px;color:var(--danger)">◆</span>
       <span style="font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--danger)">Security</span>
     </div>
@@ -449,3 +449,12 @@ function userSettingsDesktopHTML() {
 </div>`;
 }
 window.userSettingsDesktopHTML = userSettingsDesktopHTML;
+
+window._scrollToSettingsSection = function(rowEl, sectionId) {
+  const el = document.getElementById(sectionId);
+  if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  if (rowEl) {
+    rowEl.parentElement.querySelectorAll("[data-nav-row]").forEach(r => r.classList.remove("active"));
+    rowEl.classList.add("active");
+  }
+};
