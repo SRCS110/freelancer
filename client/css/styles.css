@@ -450,24 +450,21 @@ button { font-family: 'Inter', sans-serif; cursor: pointer; border: none; border
 .mobile-bar-btn.active { color: var(--accent); border-color: var(--accent); background: color-mix(in srgb,var(--accent) 10%,transparent); }
 
 /* ── Mobile bottom tab bar ──────────────────────────────────── */
+/* Flat, full-width bar — 3 tabs (Today / Money / Hub). */
 .mobile-tabs {
   display: none;
   position: fixed;
-  left: 12px; right: 12px;
-  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
-  height: 62px;
+  left: 0; right: 0;
+  bottom: 0;
   z-index: 1000;
-  padding: 0 4px;
+  padding: 10px 16px calc(16px + env(safe-area-inset-bottom, 0px));
   align-items: center;
   justify-content: space-around;
+  gap: 4px;
 
-  /* Floating translucent pill */
-  border-radius: 18px;
-  background: color-mix(in srgb, var(--bg) 72%, transparent);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
-  box-shadow: 0 6px 24px rgba(0,0,0,.16), 0 1px 2px rgba(0,0,0,.08);
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  border-radius: 0;
 }
 .mobile-tab {
   display: flex;
@@ -476,7 +473,6 @@ button { font-family: 'Inter', sans-serif; cursor: pointer; border: none; border
   justify-content: center;
   gap: 4px;
   flex: 1;
-  height: 100%;
   cursor: pointer;
   color: var(--text-muted);
   transition: color .15s, transform .12s;
@@ -487,17 +483,18 @@ button { font-family: 'Inter', sans-serif; cursor: pointer; border: none; border
 .mobile-tab:active { transform: scale(.9); }
 .mobile-tab-icon {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 19px;
+  font-size: 17px;
   line-height: 1;
 }
 .mobile-tab-label {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: .4px;
-  text-transform: uppercase;
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
   line-height: 1;
 }
+.mobile-tab.active .mobile-tab-label { font-weight: 700; }
 
 /* Hamburger kept for drawer */
 .hamburger {
@@ -832,12 +829,6 @@ input::placeholder, textarea::placeholder {
   font-size: 15px;
 }
 .mobile-bar-btn { border-radius: var(--radius-sm); }
-.mobile-tabs    { border-radius: 22px; }
-.mobile-tab-label {
-  font-family: var(--font-sans);
-  font-weight: 600;
-  letter-spacing: .03em;
-}
 
 /* ── Misc ───────────────────────────────────────────────────── */
 .empty-text { font-family: var(--font-sans); }

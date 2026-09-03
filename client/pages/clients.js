@@ -12,6 +12,7 @@ function clientsHTML() {
   const { clients } = STATE.data;
 
   if (window._openClientId) return clientFileHTML(window._openClientId);
+  if (window.innerWidth <= 640) return _clientsMobileHTML(clients);
 
   return `
 <div class="page-section-header">
@@ -64,6 +65,54 @@ ${clients.length === 0
 </div>`;
 }
 
+function _initials(name) {
+  return (name || "?").trim().split(/\s+/).slice(0, 2).map(w => w[0]).join("").toUpperCase();
+}
+
+// ── Mobile: full-width row list (real project count + amount owed) ──
+function _clientsMobileHTML(clients) {
+  const invoices = STATE.data.invoices || [];
+  const projects = STATE.data.projects || [];
+
+  const rows = clients.map(c => {
+    const projCt   = projects.filter(p => p.client_id === c.id).length;
+    const clientInv = invoices.filter(i => i.client_id === c.id);
+    const owed     = clientInv.filter(i => ["Sent","Overdue"].includes(i.status)).reduce((a, i) => a + Number(i.amount), 0);
+    const late     = clientInv.some(i => i.status === "Overdue");
+    const sub = c.status === "Inactive"
+      ? `Archived${c.updated_at ? " · last " + fmtDate(c.updated_at) : ""}`
+      : c.status === "Lead"
+        ? "Lead"
+        : `${projCt} project${projCt !== 1 ? "s" : ""}${owed ? " · " + usd(owed) + " owed" : ""}`;
+    return `
+    <div onclick="openClientFile('${c.id}')"
+      style="display:flex;align-items:center;gap:12px;padding:14px 4px;border-top:1px solid var(--border);cursor:pointer">
+      <div style="width:34px;height:34px;border-radius:10px;background:var(--bg-input);border:1px solid ${late ? "var(--border-2)" : "var(--border)"};
+        display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:12px;color:${late ? "var(--accent)" : "var(--text-muted)"};flex-shrink:0">${_initials(c.name)}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;font-weight:600;color:var(--text)">${c.name}</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:2px">${sub}</div>
+      </div>
+      ${late ? `<span style="color:var(--danger);font-family:'JetBrains Mono',monospace;font-size:11px;flex-shrink:0">late</span>`
+             : `<span style="color:var(--text-muted);flex-shrink:0">→</span>`}
+    </div>`;
+  }).join("");
+
+  return `
+<div style="font-family:Fraunces,Georgia,serif;font-size:26px;margin-bottom:2px">Clients</div>
+<div style="font-size:13px;color:var(--text-muted);margin-bottom:12px">${clients.length} client${clients.length !== 1 ? "s" : ""} on record</div>
+<div style="position:relative;margin-bottom:8px">
+  <input id="client-search" placeholder="Search clients" style="padding-left:32px;width:100%" oninput="renderClientSearch(this.value)"/>
+  <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:14px;pointer-events:none">⌕</span>
+</div>
+<button class="btn btn-primary" style="width:100%;margin-bottom:4px" onclick="openClientModal(null)">+ New Client</button>
+<div id="client-list-container">
+  ${clients.length === 0
+    ? `<div class="empty"><div class="empty-text">No clients yet.</div></div>`
+    : rows}
+</div>`;
+}
+
 window.renderClientSearch = function(q) {
   const term = q.toLowerCase();
   const filtered = STATE.data.clients.filter(c =>
@@ -77,6 +126,25 @@ window.renderClientSearch = function(q) {
   if (!container) return;
   if (filtered.length === 0) {
     container.innerHTML = `<div class="empty"><div class="empty-text">no clients match "${q}"</div></div>`;
+    return;
+  }
+  if (window.innerWidth <= 640) {
+    const invoices = STATE.data.invoices || [];
+    const projects = STATE.data.projects || [];
+    container.innerHTML = filtered.map(c => {
+      const projCt    = projects.filter(p => p.client_id === c.id).length;
+      const clientInv = invoices.filter(i => i.client_id === c.id);
+      const owed      = clientInv.filter(i => ["Sent","Overdue"].includes(i.status)).reduce((a, i) => a + Number(i.amount), 0);
+      const late      = clientInv.some(i => i.status === "Overdue");
+      const sub = c.status === "Inactive" ? "Archived" : c.status === "Lead" ? "Lead"
+        : `${projCt} project${projCt !== 1 ? "s" : ""}${owed ? " · " + usd(owed) + " owed" : ""}`;
+      return `
+      <div onclick="openClientFile('${c.id}')" style="display:flex;align-items:center;gap:12px;padding:14px 4px;border-top:1px solid var(--border);cursor:pointer">
+        <div style="width:34px;height:34px;border-radius:10px;background:var(--bg-input);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-muted);flex-shrink:0">${_initials(c.name)}</div>
+        <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:600;color:var(--text)">${c.name}</div><div style="font-size:12px;color:var(--text-muted);margin-top:2px">${sub}</div></div>
+        ${late ? `<span style="color:var(--danger);font-family:'JetBrains Mono',monospace;font-size:11px;flex-shrink:0">late</span>` : `<span style="color:var(--text-muted);flex-shrink:0">→</span>`}
+      </div>`;
+    }).join("");
     return;
   }
   container.innerHTML = filtered.map(c => {
@@ -118,8 +186,16 @@ function clientFileHTML(id) {
   const projects  = (STATE.data.projects || []).filter(p => p.client_id === id);
   const invoices  = (STATE.data.invoices || []).filter(i => i.client_id === id);
   const docs      = (STATE.data.client_documents || []).filter(d => d.client_id === id);
+  const finances  = (STATE.data.finances || []).filter(f => f.client_id === id);
   const totalBilled = invoices.reduce((s, i) => s + Number(i.amount), 0);
   const totalPaid   = invoices.filter(i => i.status === "Paid").reduce((s, i) => s + Number(i.amount), 0);
+  const owedNow     = invoices.filter(i => ["Sent","Overdue"].includes(i.status)).reduce((s, i) => s + Number(i.amount), 0);
+
+  // Real recent activity — finance entries + invoice due dates for this client, newest first.
+  const activity = [
+    ...finances.map(f => ({ date: f.date, label: f.description || f.category, amt: f.type === "income" ? f.amount : -f.amount })),
+    ...invoices.filter(i => i.due_date).map(i => ({ date: i.due_date, label: `${i.invoice_number} — ${i.status}`, amt: null })),
+  ].filter(e => e.date).sort((a, b) => (b.date > a.date ? 1 : -1)).slice(0, 6);
 
   return `
 <div class="breadcrumb">
@@ -142,19 +218,37 @@ function clientFileHTML(id) {
   </div>
 </div>
 
+<!-- Mobile quick actions -->
+<div class="mobile-only" style="display:flex;gap:8px;margin-bottom:20px">
+  <div class="btn btn-primary" style="flex:1;text-align:center;cursor:pointer" onclick="navigate('invoices');setTimeout(()=>openInvModal(null),100)">New invoice</div>
+  ${c.email ? `<a href="mailto:${c.email}" class="btn btn-ghost" style="flex:1;text-align:center;text-decoration:none">Email</a>` : ""}
+</div>
+
 <!-- Stats row -->
 <div class="grid-4" style="margin-bottom:20px">
   ${[
-    { label: "Projects",   val: projects.length, color: "var(--accent)" },
-    { label: "Invoices",   val: invoices.length, color: "var(--text)" },
+    { label: "Projects",     val: projects.length,  color: "var(--accent)" },
+    { label: "Invoices",     val: invoices.length,  color: "var(--text)" },
     { label: "Total Billed", val: usd(totalBilled), color: "var(--text)" },
-    { label: "Total Paid",   val: usd(totalPaid),   color: "var(--accent)" },
+    { label: "Owed Now",     val: usd(owedNow),     color: owedNow > 0 ? "var(--danger)" : "var(--money-pos)" },
   ].map(s => `
   <div class="card">
     <div class="card-label">${s.label}</div>
     <div class="card-value" style="font-size:18px;color:${s.color}">${s.val}</div>
   </div>`).join("")}
 </div>
+
+${activity.length > 0 ? `
+<div class="card" style="margin-bottom:20px">
+  <div class="section-title" style="margin-bottom:14px">recent activity</div>
+  <div style="display:flex;flex-direction:column;gap:12px">
+    ${activity.map(e => `
+    <div style="display:flex;gap:12px">
+      <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted);width:60px;flex-shrink:0">${fmtDate(e.date)}</span>
+      <span style="font-size:13px;flex:1;color:var(--text)">${e.label}${e.amt != null ? ` — <span style="color:${e.amt >= 0 ? "var(--money-pos)" : "var(--danger)"}">${e.amt >= 0 ? "+" : "−"}${usd(Math.abs(e.amt))}</span>` : ""}</span>
+    </div>`).join("")}
+  </div>
+</div>` : ""}
 
 <div class="grid-2" style="margin-bottom:20px">
   <!-- Contact info -->

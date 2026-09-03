@@ -7,6 +7,7 @@ let STATE = {
   user:        null,
   page:        "dashboard",
   openProject: null,
+  openInvoice: null,
   data: {
     clients: [], projects: [], finances: [], invoices: [],
     business_plan: null, user_settings: null,
@@ -14,6 +15,7 @@ let STATE = {
     workflow_templates: [], workflow_steps: [], workflow_runs: [], workflow_run_steps: [],
     project_todos: [], project_todo_sections: [], client_documents: [],
     brainstorm: [], teams: [], team_members: [], team_invites: [], time_entries: [],
+    invoice_items: [],
   },
   loading: true,
 };
@@ -27,7 +29,7 @@ async function loadAll() {
       bpList, settingsList, techStack,
       wfTemplates, wfSteps, wfRuns, wfRunSteps,
       projectTodos, todoSections, clientDocs,
-      brainstormNotes, teams, teamMembers, teamInvites, timeEntries
+      brainstormNotes, teams, teamMembers, teamInvites, timeEntries, invoiceItems
     ] = await Promise.all([
       db.list("clients"),
       db.list("projects"),
@@ -48,6 +50,7 @@ async function loadAll() {
       db.list("team_members").catch(() => []),
       db.list("team_invites").catch(() => []),
       db.list("time_entries").catch(() => []),
+      db.list("invoice_items").catch(() => []),
     ]);
     STATE.data = {
       clients:               clients        || [],
@@ -69,6 +72,7 @@ async function loadAll() {
       team_members:          teamMembers    || [],
       team_invites:          teamInvites    || [],
       time_entries:          timeEntries    || [],
+      invoice_items:         invoiceItems   || [],
     };
   } catch (e) {
     console.error("loadAll error:", e.message);
@@ -100,12 +104,15 @@ async function _checkOverdueInvoices() {
 function navigate(page) {
   STATE.page        = page;
   STATE.openProject = null;
+  STATE.openInvoice = null;
   if (page !== "clients") window._openClientId = null;
   render();
 }
 
 window.navigate    = navigate;
-window.openProject = function(p) { STATE.openProject = p; STATE.page = "projects"; render(); };
+window.openProject = function(p) { STATE.openProject = p; STATE.openInvoice = null; STATE.page = "projects"; render(); };
+window.openInvoice = function(inv) { STATE.openInvoice = inv; STATE.page = "finances"; render(); };
+window.closeInvoiceDetail = function() { STATE.openInvoice = null; render(); };
 window.doSignOut   = function() { Auth.signOut(); };
 
 // ── Sidebar ─────────────────────────────────────────────────
@@ -183,12 +190,13 @@ function sidebarHTML() {
 
 const MOBILE_TABS = [
   // direct: straight to a page.  hub: opens a hub id from HUB_CONFIG.
-  { id: "clients",  icon: "○", iconActive: "●", label: "Clients",  direct: "clients",  pages: ["clients"] },
-  { id: "projects", icon: "◻", iconActive: "◼", label: "Projects", direct: "projects", pages: ["projects"] },
-  { id: "money",    icon: "◇", iconActive: "◆", label: "Money",    direct: "finances", pages: ["finances","invoices"] },
-  // Overview is home — its tile grid reaches every remaining page
-  { id: "overview", icon: "△", iconActive: "▲", label: "Overview", hub: "workspace",
-    pages: ["tech-stack","brainstorm","workflows","team","business-plan","settings"] },
+  // Today is home — one money number + the queue of what needs you.
+  { id: "today", icon: "◆", label: "Today", direct: "dashboard", pages: ["dashboard"] },
+  // Money — Invoices / Ledger / Taxes live together behind pill tabs.
+  { id: "money", icon: "◇", label: "Money", direct: "finances", pages: ["finances","invoices"] },
+  // Hub — everything else, reached through its tile grid.
+  { id: "hub",   icon: "◫", label: "Hub",   hub: "workspace",
+    pages: ["clients","projects","tech-stack","brainstorm","workflows","team","business-plan","settings","timer"] },
 ];
 
 function mobileBarParts() {
@@ -200,10 +208,9 @@ function mobileBarParts() {
     const pg = STATE.page || "";
     if (pg.startsWith("hub-")) {
       const hubId = pg.slice(4);
-      return MOBILE_TABS.find(t => (t.hub || t.id) === hubId)?.id || "overview";
+      return MOBILE_TABS.find(t => (t.hub || t.id) === hubId)?.id || "hub";
     }
-    if (pg === "dashboard") return "overview";
-    return MOBILE_TABS.find(t => t.pages.includes(pg))?.id || "overview";
+    return MOBILE_TABS.find(t => t.pages.includes(pg))?.id || "hub";
   })();
 
   const isMobile = window.innerWidth <= 640;
@@ -256,7 +263,7 @@ function mobileBarParts() {
     return `
   <div class="mobile-tab${isActive ? " active" : ""}" onclick="mobileTabClick('${tab.id}')">
     <div style="position:relative;display:inline-flex">
-      <span class="mobile-tab-icon">${isActive ? (tab.iconActive || tab.icon) : tab.icon}</span>
+      <span class="mobile-tab-icon">${tab.icon}</span>
       ${hasOverdue ? `<span style="position:absolute;top:-2px;right:-6px;width:7px;height:7px;background:var(--danger);border-radius:50%;border:1.5px solid var(--bg)"></span>` : ""}
     </div>
     <span class="mobile-tab-label">${tab.label}</span>
@@ -274,6 +281,7 @@ window.mobileTabClick = function(tabId) {
   const tab = MOBILE_TABS.find(t => t.id === tabId);
   if (!tab) return;
   STATE.openProject = null;
+  STATE.openInvoice = null;
   window._openClientId = null;
   window._projFilter = null;   // Projects re-opens on Active
   navigate(tab.direct ? tab.direct : "hub-" + (tab.hub || tab.id));
@@ -324,11 +332,14 @@ function render() {
   let content = "";
   try {
     if      (STATE.page === "dashboard")                         content = (window.innerWidth <= 640)
-                                                                   ? mobileHubHTML("workspace")
+                                                                   ? todayHTML()
                                                                    : dashboardHTML();
     else if (STATE.page === "clients")                           content = clientsHTML();
     else if (STATE.page === "projects" && STATE.openProject)     content = projectFileHTML(STATE.openProject);
     else if (STATE.page === "projects")                          content = projectsListHTML();
+    else if (STATE.page === "finances" && window.innerWidth <= 640) content = STATE.openInvoice
+                                                                   ? invoiceDetailHTML(STATE.openInvoice)
+                                                                   : moneyMobileHTML();
     else if (STATE.page === "finances")                          content = financesHTML();
     else if (STATE.page === "invoices")                          content = invoicesHTML();
     else if (STATE.page === "business-plan")                     content = businessPlanHTML();
@@ -337,6 +348,7 @@ function render() {
     else if (STATE.page === "workflows")                         content = workflowsHTML();
     else if (STATE.page === "brainstorm")                        content = brainstormHTML();
     else if (STATE.page === "team")                              content = teamHTML();
+    else if (STATE.page === "timer")                             content = timerHTML();
     else if (STATE.page === "ai")                               content = aiPageHTML();
     else if (STATE.page?.startsWith("hub-"))                    content = mobileHubHTML(STATE.page.slice(4));
   } catch(e) {
@@ -426,7 +438,7 @@ function render() {
       document.body.appendChild(pill);
     }
     const t = window.runningEntry ? window.runningEntry() : null;
-    if (t && STATE.page !== "projects") {
+    if (t && STATE.page !== "projects" && STATE.page !== "timer") {
       const proj = (STATE.data.projects || []).find(p => p.id === t.project_id);
       pill.innerHTML = `
         <div class="timer-pill" onclick="openProject(${JSON.stringify(proj || {}).replace(/'/g, "&#39;")})">
