@@ -541,3 +541,174 @@ window.deleteWfRun = async function(id) {
 };
 
 window.workflowsHTML = workflowsHTML;
+
+// ============================================================
+//  DESKTOP — Workflows
+//  List rail (running + templates) + inline run/template detail +
+//  a right rail with real run-duration analytics (created_at →
+//  updated_at on completed runs of the same template).
+// ============================================================
+function _wfTemplateAvgDays(templateId) {
+  const runs = (STATE.data.workflow_runs || []).filter(r => r.template_id === templateId && r.status === "completed" && r.created_at && r.updated_at);
+  if (!runs.length) return null;
+  const total = runs.reduce((s,r)=> s + Math.max(0,(new Date(r.updated_at)-new Date(r.created_at))/86400000), 0);
+  return total / runs.length;
+}
+
+function workflowsDesktopHTML() {
+  const templates = STATE.data.workflow_templates || [];
+  const allRuns    = STATE.data.workflow_runs || [];
+  const activeRuns = allRuns.filter(r => r.status === "active");
+
+  const runId = window._wfRunId;
+  const selectedRun = runId ? allRuns.find(r => r.id === runId) : (activeRuns[0] || null);
+  const templateId = window._wfTemplateId;
+  const selectedTemplate = !selectedRun && templateId ? templates.find(t => t.id === templateId) : null;
+
+  return `
+<div class="page-section-header">
+  <div>
+    <div class="page-title">Workflows</div>
+    <div class="page-sub">${templates.length} template${templates.length!==1?"s":""} · ${activeRuns.length} running</div>
+  </div>
+  <div class="btn-row">
+    <button class="btn btn-ghost" onclick="openWfRunModal(null)">▶ start run</button>
+    <button class="btn btn-primary" onclick="openWfTemplateModal(null)">+ new template</button>
+  </div>
+</div>
+
+<div class="desk-shell">
+  <div class="desk-col-list wide">
+    <div class="desk-list-row" style="cursor:default;border-bottom:1px solid var(--border)"><div class="desk-list-row-sub">Running · ${activeRuns.length}</div></div>
+    ${activeRuns.length === 0
+      ? `<div style="padding:12px 16px;font-size:12px;color:var(--text-muted)">nothing running.</div>`
+      : activeRuns.map(r => {
+        const steps = (STATE.data.workflow_run_steps||[]).filter(s=>s.run_id===r.id);
+        const done = steps.filter(s=>s.completed).length;
+        return `
+    <div class="desk-list-row${r.id===selectedRun?.id?" active":""}" onclick="window._wfRunId='${r.id}';window._wfTemplateId=null;render()">
+      <div class="desk-list-row-title">${r.name}</div>
+      <div class="desk-list-row-sub">${[r.client_name, r.project_name].filter(Boolean).join(" · ") || "stand-alone"} · step ${done+1}/${steps.length||1}</div>
+    </div>`;
+      }).join("")}
+
+    <div class="desk-list-row" style="cursor:default;border-bottom:1px solid var(--border);margin-top:8px"><div class="desk-list-row-sub">Templates · ${templates.length}</div></div>
+    ${templates.length === 0
+      ? `<div style="padding:12px 16px;font-size:12px;color:var(--text-muted)">no templates yet.</div>`
+      : templates.map(t => {
+        const steps = (STATE.data.workflow_steps||[]).filter(s=>s.template_id===t.id);
+        const used = allRuns.filter(r=>r.template_id===t.id).length;
+        return `
+    <div class="desk-list-row${t.id===selectedTemplate?.id?" active":""}" onclick="window._wfTemplateId='${t.id}';window._wfRunId=null;render()">
+      <div class="desk-list-row-title">${t.name}</div>
+      <div class="desk-list-row-sub">${steps.length} steps · used ${used} time${used!==1?"s":""}</div>
+    </div>`;
+      }).join("")}
+    <div class="desk-list-row" onclick="openWfTemplateModal(null)" style="color:var(--accent);display:flex;align-items:center;gap:9px">
+      <span style="font-family:var(--font-mono);font-size:14px">+</span><span style="font-size:13px;font-weight:600">New template</span>
+    </div>
+  </div>
+
+  <div class="desk-col-main">
+    ${selectedRun ? _wfDeskRunHTML(selectedRun) : selectedTemplate ? _wfDeskTemplateHTML(selectedTemplate) : `<div class="empty"><div class="empty-text">select a run or template.</div></div>`}
+  </div>
+
+  ${selectedRun ? `<div class="desk-rail narrow">${_wfDeskRailHTML(selectedRun)}</div>` : ""}
+</div>`;
+}
+window.workflowsDesktopHTML = workflowsDesktopHTML;
+
+function _wfDeskTemplateHTML(t) {
+  const steps = (STATE.data.workflow_steps||[]).filter(s=>s.template_id===t.id).sort((a,b)=>a.sort_order-b.sort_order);
+  return `
+<div class="page-section-header">
+  <div>
+    <div class="page-title" style="font-size:24px">${t.name}</div>
+    <div class="page-sub">${t.category} · ${steps.length} steps</div>
+  </div>
+  <div class="btn-row">
+    <button class="btn btn-ghost" onclick="openWfTemplateModal('${t.id}')">Edit</button>
+    <button class="btn btn-primary" onclick="openWfRunModal('${t.id}')">▶ Start run</button>
+  </div>
+</div>
+${t.description ? `<div style="font-size:13px;color:var(--text-muted);margin-bottom:20px">${t.description}</div>` : ""}
+<div style="display:flex;flex-direction:column;gap:8px">
+  ${steps.length === 0 ? `<div style="font-size:12.5px;color:var(--text-muted)">no steps yet.</div>` : steps.map((s,i) => `
+  <div style="display:flex;gap:12px;padding:13px 15px;background:var(--bg-raised);border:1px solid var(--border);border-radius:var(--radius)">
+    <span style="font-family:var(--font-mono);font-size:12px;color:var(--text-muted);flex-shrink:0">${i+1}.</span>
+    <div style="flex:1;min-width:0">
+      <div style="font-size:13.5px;font-weight:600">${s.title}</div>
+      ${s.description ? `<div style="font-size:12px;color:var(--text-muted);margin-top:3px">${s.description}</div>` : ""}
+    </div>
+  </div>`).join("")}
+</div>`;
+}
+
+function _wfDeskRunHTML(r) {
+  const steps = (STATE.data.workflow_run_steps||[]).filter(s=>s.run_id===r.id).sort((a,b)=>a.sort_order-b.sort_order);
+  const done = steps.filter(s=>s.completed).length;
+  const template = (STATE.data.workflow_templates||[]).find(t=>t.id===r.template_id);
+  const color = template?.color || "#3bf4a3";
+
+  return `
+<div class="page-section-header">
+  <div>
+    <div style="display:flex;align-items:center;gap:9px;margin-bottom:5px">
+      <span style="width:7px;height:7px;border-radius:999px;background:var(--money-pos);animation:fhpulse 1.8s ease-in-out infinite"></span>
+      <span style="font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--money-pos)">${r.status === "active" ? "Running" : r.status} · started ${fmtDate(r.created_at)}</span>
+    </div>
+    <div class="page-title" style="font-size:24px">${r.name}</div>
+  </div>
+  <div class="btn-row">
+    ${r.status !== "completed" ? `<button class="btn btn-ghost" onclick="completeWfRun('${r.id}')">✓ mark complete</button>` : ""}
+    <button class="btn btn-danger btn-sm" onclick="deleteWfRun('${r.id}')">delete</button>
+  </div>
+</div>
+
+<div style="margin-bottom:20px">
+  <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+    <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted)">${done} of ${steps.length} steps complete</span>
+    <span style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:${color}">${steps.length?Math.round(done/steps.length*100):0}%</span>
+  </div>
+  <div class="desk-progress"><span style="width:${steps.length?Math.round(done/steps.length*100):0}%;background:${color}"></span></div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:8px">
+  ${steps.length === 0 ? `<div style="font-size:12.5px;color:var(--text-muted)">no steps in this run.</div>` : steps.map((s,i) => `
+  <div style="display:flex;gap:12px;align-items:flex-start;padding:14px 15px;background:var(--bg-raised);border:1px solid ${s.completed?color+"33":"var(--border)"};border-radius:var(--radius);opacity:${s.completed?"0.65":"1"}">
+    <button onclick="toggleStep('${s.id}',${s.completed})" style="width:19px;height:19px;border-radius:999px;border:2px solid ${s.completed?color:"var(--border-2)"};background:${s.completed?color:"transparent"};cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--bg);font-size:10px;font-weight:900;flex-shrink:0;margin-top:1px">${s.completed?"✓":""}</button>
+    <div style="flex:1;min-width:0">
+      <div style="font-size:13.5px;font-weight:600;color:${s.completed?"var(--text-muted)":"var(--text)"};${s.completed?"text-decoration:line-through":""}">${i+1}. ${s.title}</div>
+      ${s.description ? `<div style="font-size:12px;color:var(--text-muted);margin-top:3px">${s.description}</div>` : ""}
+      ${!s.completed ? `<input placeholder="add a note…" style="margin-top:8px;font-size:12px;padding:6px 9px" value="${s.notes||""}" onblur="saveStepNote('${s.id}',this.value)"/>` : (s.notes ? `<div style="font-size:11.5px;color:var(--text-muted);margin-top:4px;font-style:italic">"${s.notes}"</div>` : "")}
+    </div>
+  </div>`).join("")}
+</div>`;
+}
+
+function _wfDeskRailHTML(r) {
+  const template = (STATE.data.workflow_templates||[]).find(t=>t.id===r.template_id);
+  const elapsedDays = Math.max(0, Math.round((new Date() - new Date(r.created_at)) / 86400000));
+  const avgDays = template ? _wfTemplateAvgDays(template.id) : null;
+  const recent = template
+    ? (STATE.data.workflow_runs||[]).filter(x => x.template_id===template.id && x.status==="completed" && x.id!==r.id && x.updated_at)
+        .sort((a,b)=>new Date(b.updated_at)-new Date(a.updated_at)).slice(0,5)
+    : [];
+
+  return `
+<div style="font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:11px">Run details</div>
+<div style="background:var(--bg-raised);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:20px">
+  <div style="display:flex;gap:10px;padding:11px 13px;border-bottom:1px solid var(--border)"><span style="flex:1;font-size:12.5px;color:var(--text-muted)">Client</span><span style="font-size:12.5px;font-weight:600">${r.client_name || "—"}</span></div>
+  <div style="display:flex;gap:10px;padding:11px 13px;border-bottom:1px solid var(--border)"><span style="flex:1;font-size:12.5px;color:var(--text-muted)">Project</span><span style="font-size:12.5px;font-weight:600">${r.project_name || "—"}</span></div>
+  <div style="display:flex;gap:10px;padding:11px 13px;${avgDays!=null?'border-bottom:1px solid var(--border)':''}"><span style="flex:1;font-size:12.5px;color:var(--text-muted)">Elapsed</span><span style="font-family:var(--font-mono);font-size:12.5px">${elapsedDays} day${elapsedDays!==1?"s":""}</span></div>
+  ${avgDays!=null ? `<div style="display:flex;gap:10px;padding:11px 13px"><span style="flex:1;font-size:12.5px;color:var(--text-muted)">Avg for template</span><span style="font-family:var(--font-mono);font-size:12.5px">${avgDays.toFixed(0)} days</span></div>` : ""}
+</div>
+${recent.length ? `
+<div style="font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:11px">Recent runs</div>
+<div style="display:flex;flex-direction:column;gap:12px">
+  ${recent.map(x => {
+    const days = Math.max(0, Math.round((new Date(x.updated_at)-new Date(x.created_at))/86400000));
+    return `<div style="display:flex;gap:10px;align-items:baseline"><span style="flex:1;font-size:12.5px">${x.client_name || x.name}</span><span style="font-family:var(--font-mono);font-size:11px;color:var(--money-pos)">${days} day${days!==1?"s":""}</span></div>`;
+  }).join("")}
+</div>` : ""}`;
+}

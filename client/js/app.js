@@ -15,7 +15,7 @@ let STATE = {
     workflow_templates: [], workflow_steps: [], workflow_runs: [], workflow_run_steps: [],
     project_todos: [], project_todo_sections: [], client_documents: [],
     brainstorm: [], teams: [], team_members: [], team_invites: [], time_entries: [],
-    invoice_items: [],
+    invoice_items: [], invoice_activity: [], bookmarks: [],
   },
   loading: true,
 };
@@ -29,7 +29,8 @@ async function loadAll() {
       bpList, settingsList, techStack,
       wfTemplates, wfSteps, wfRuns, wfRunSteps,
       projectTodos, todoSections, clientDocs,
-      brainstormNotes, teams, teamMembers, teamInvites, timeEntries, invoiceItems
+      brainstormNotes, teams, teamMembers, teamInvites, timeEntries, invoiceItems,
+      invoiceActivity, bookmarks
     ] = await Promise.all([
       db.list("clients"),
       db.list("projects"),
@@ -51,6 +52,8 @@ async function loadAll() {
       db.list("team_invites").catch(() => []),
       db.list("time_entries").catch(() => []),
       db.list("invoice_items").catch(() => []),
+      db.list("invoice_activity").catch(() => []),
+      db.list("bookmarks").catch(() => []),
     ]);
     STATE.data = {
       clients:               clients        || [],
@@ -73,6 +76,8 @@ async function loadAll() {
       team_invites:          teamInvites    || [],
       time_entries:          timeEntries    || [],
       invoice_items:         invoiceItems   || [],
+      invoice_activity:      invoiceActivity || [],
+      bookmarks:             bookmarks      || [],
     };
   } catch (e) {
     console.error("loadAll error:", e.message);
@@ -116,22 +121,23 @@ window.closeInvoiceDetail = function() { STATE.openInvoice = null; render(); };
 window.doSignOut   = function() { Auth.signOut(); };
 
 // ── Sidebar ─────────────────────────────────────────────────
+// Pinned = the three things you touch every day. Workspace = everything
+// else you manage. More = kept reachable but out of the way (Team, AI).
 const NAV_GROUPS = [
+  { label: "Pinned", items: [
+    { id: "dashboard",     label: "Today",        icon: "◆" },
+    { id: "finances",      label: "Money",        icon: "◇" },
+    { id: "time",          label: "Time",         icon: "◷" },
+  ]},
   { label: "Workspace", items: [
-    { id: "dashboard",     label: "Dashboard",    icon: "◈" },
     { id: "clients",       label: "Clients",      icon: "◎" },
     { id: "projects",      label: "Projects",     icon: "◫" },
-  ]},
-  { label: "Money", items: [
-    { id: "finances",      label: "Finances",     icon: "◇" },
-    { id: "invoices",      label: "Invoices",     icon: "◻" },
-  ]},
-  { label: "Tools", items: [
-    { id: "tech-stack",    label: "Tech Stack",   icon: "◳" },
-    { id: "brainstorm",    label: "Brainstorm",   icon: "◆" },
-  ]},
-  { label: "Operations", items: [
     { id: "workflows",     label: "Workflows",    icon: "◳" },
+    { id: "brainstorm",    label: "Notes",        icon: "✎" },
+    { id: "bookmarks",     label: "Bookmarks",    icon: "◈" },
+    { id: "tech-stack",    label: "Tech Stack",   icon: "◳" },
+  ]},
+  { label: "More", items: [
     { id: "team",          label: "Team",         icon: "◎" },
     { id: "ai",            label: "AI Assistant", icon: "✦" },
   ]},
@@ -145,6 +151,9 @@ function sidebarHTML() {
   const overdueCt   = STATE.data.invoices.filter(i => i.status === "Overdue").length;
   const demoBanner  = window.DEMO_MODE ? demoBannerHTML() : "";
   const isLight     = _isLight();
+  const isRunning   = typeof runningEntry === "function" && !!runningEntry();
+  const vaultLocked = typeof hasPinSet === "function" && hasPinSet() &&
+                       !(typeof pinSessionActive === "function" && pinSessionActive());
 
   return `
 <div class="sidebar">
@@ -159,8 +168,15 @@ function sidebarHTML() {
     <div class="nav-item${STATE.page === n.id ? " active" : ""}" onclick="navigate('${n.id}')">
       <span class="nav-icon">${n.icon}</span>
       <span>${n.label}</span>
-      ${n.id === "invoices" && overdueCt > 0
+      ${n.id === "finances" && overdueCt > 0
         ? `<span class="nav-badge">${overdueCt}</span>` : ""}
+      ${n.id === "time" && isRunning
+        ? `<span style="width:6px;height:6px;border-radius:999px;background:var(--money-pos);margin-left:auto;flex-shrink:0"></span>` : ""}
+      ${n.id === "bookmarks"
+        ? (vaultLocked
+            ? `<span style="font-family:var(--font-mono);font-size:9px;color:var(--warning);margin-left:auto;flex-shrink:0">lock</span>`
+            : `<span style="font-family:var(--font-mono);font-size:9px;color:var(--money-pos);margin-left:auto;flex-shrink:0">open</span>`)
+        : ""}
     </div>`).join("")}
   </div>`).join("")}
 
@@ -196,7 +212,7 @@ const MOBILE_TABS = [
   { id: "money", icon: "◇", label: "Money", direct: "finances", pages: ["finances","invoices"] },
   // Hub — everything else, reached through its tile grid.
   { id: "hub",   icon: "◫", label: "Hub",   hub: "workspace",
-    pages: ["clients","projects","tech-stack","brainstorm","workflows","team","business-plan","settings","timer"] },
+    pages: ["clients","projects","tech-stack","brainstorm","workflows","team","business-plan","settings","timer","bookmarks"] },
 ];
 
 function mobileBarParts() {
@@ -241,7 +257,7 @@ function mobileBarParts() {
     <div class="nav-item${STATE.page === n.id ? " active" : ""}" onclick="drawerNavigate('${n.id}')">
       <span class="nav-icon">${n.icon}</span>
       <span>${n.label}</span>
-      ${n.id === "invoices" && overdueCt > 0
+      ${n.id === "finances" && overdueCt > 0
         ? `<span class="nav-badge">${overdueCt}</span>` : ""}
     </div>`).join("")}
   </div>`).join("") + `
@@ -331,22 +347,25 @@ function render() {
 
   let content = "";
   try {
-    if      (STATE.page === "dashboard")                         content = (window.innerWidth <= 640)
+    const isMobileW = window.innerWidth <= 640;
+    if      (STATE.page === "dashboard")                         content = isMobileW
                                                                    ? todayHTML()
-                                                                   : dashboardHTML();
+                                                                   : (window.todayDesktopHTML ? todayDesktopHTML() : dashboardHTML());
     else if (STATE.page === "clients")                           content = clientsHTML();
     else if (STATE.page === "projects" && STATE.openProject)     content = projectFileHTML(STATE.openProject);
-    else if (STATE.page === "projects")                          content = projectsListHTML();
-    else if (STATE.page === "finances" && window.innerWidth <= 640) content = STATE.openInvoice
+    else if (STATE.page === "projects")                          content = (!isMobileW && window.projectsDesktopHTML) ? projectsDesktopHTML() : projectsListHTML();
+    else if (STATE.page === "finances" && isMobileW)             content = STATE.openInvoice
                                                                    ? invoiceDetailHTML(STATE.openInvoice)
                                                                    : moneyMobileHTML();
-    else if (STATE.page === "finances")                          content = financesHTML();
-    else if (STATE.page === "invoices")                          content = invoicesHTML();
-    else if (STATE.page === "business-plan")                     content = businessPlanHTML();
-    else if (STATE.page === "settings")                          content = userSettingsHTML();
-    else if (STATE.page === "tech-stack")                        content = techStackHTML();
-    else if (STATE.page === "workflows")                         content = workflowsHTML();
-    else if (STATE.page === "brainstorm")                        content = brainstormHTML();
+    else if (STATE.page === "finances")                          content = window.moneyDesktopHTML ? moneyDesktopHTML() : financesHTML();
+    else if (STATE.page === "invoices")                          content = isMobileW ? moneyMobileHTML() : (window.moneyDesktopHTML ? moneyDesktopHTML() : invoicesHTML());
+    else if (STATE.page === "time")                              content = isMobileW ? timerHTML() : (window.timeDesktopHTML ? timeDesktopHTML() : timerHTML());
+    else if (STATE.page === "bookmarks")                         content = window.bookmarksDesktopHTML && !isMobileW ? bookmarksDesktopHTML() : bookmarksHTML();
+    else if (STATE.page === "business-plan")                     content = (!isMobileW && window.businessPlanDesktopHTML) ? businessPlanDesktopHTML() : businessPlanHTML();
+    else if (STATE.page === "settings")                          content = (!isMobileW && window.userSettingsDesktopHTML) ? userSettingsDesktopHTML() : userSettingsHTML();
+    else if (STATE.page === "tech-stack")                        content = (!isMobileW && window.techStackDesktopHTML) ? techStackDesktopHTML() : techStackHTML();
+    else if (STATE.page === "workflows")                         content = (!isMobileW && window.workflowsDesktopHTML) ? workflowsDesktopHTML() : workflowsHTML();
+    else if (STATE.page === "brainstorm")                        content = (!isMobileW && window.notesDesktopHTML) ? notesDesktopHTML() : brainstormHTML();
     else if (STATE.page === "team")                              content = teamHTML();
     else if (STATE.page === "timer")                             content = timerHTML();
     else if (STATE.page === "ai")                               content = aiPageHTML();
@@ -440,12 +459,16 @@ function render() {
     const t = window.runningEntry ? window.runningEntry() : null;
     if (t && STATE.page !== "projects" && STATE.page !== "timer") {
       const proj = (STATE.data.projects || []).find(p => p.id === t.project_id);
+      const paused = window.isEntryPaused ? window.isEntryPaused(t) : false;
       pill.innerHTML = `
-        <div class="timer-pill" onclick="openProject(${JSON.stringify(proj || {}).replace(/'/g, "&#39;")})">
-          <span class="timer-pill-dot"></span>
-          <span class="timer-pill-time" data-timer-clock>${fmtDur(entryMinutes(t))}</span>
+        <div class="timer-pill" style="${paused ? 'border-color:color-mix(in srgb,var(--warning) 40%,transparent)' : ''}" onclick="openProject(${JSON.stringify(proj || {}).replace(/'/g, "&#39;")})">
+          <span class="timer-pill-dot" style="${paused ? 'background:var(--warning);animation:none' : ''}"></span>
+          <span class="timer-pill-time" style="${paused ? 'color:var(--warning)' : ''}" data-timer-clock>${fmtDur(entryMinutes(t))}</span>
           <span class="timer-pill-name">${proj?.name || "Running"}</span>
-          <button class="timer-pill-stop" onclick="event.stopPropagation();stopTimer()">■</button>
+          ${paused
+            ? `<button class="timer-pill-stop" style="color:var(--money-pos)" onclick="event.stopPropagation();resumeTimer('${t.id}')" title="resume">▶</button>`
+            : `<button class="timer-pill-stop" style="color:var(--warning)" onclick="event.stopPropagation();pauseTimer('${t.id}')" title="pause">⏸</button>`}
+          <button class="timer-pill-stop" onclick="event.stopPropagation();stopTimer()" title="stop">■</button>
         </div>`;
     } else {
       pill.innerHTML = "";
@@ -481,7 +504,7 @@ window._sectionAdd = function(section) {
     <span>New Client</span>
   </button>
   <button class="btn btn-ghost" style="justify-content:flex-start;gap:12px;padding:12px 16px"
-    onclick="closeModal();navigate('projects');setTimeout(()=>openProjModal(null),100)">
+    onclick="closeModal();navigate('projects');setTimeout(()=>openProjectModal(null),100)">
     <span style="font-family:'JetBrains Mono',monospace;font-size:14px">◫</span>
     <span>New Project</span>
   </button>
@@ -500,7 +523,7 @@ window._sectionAdd = function(section) {
     <span>Log Income / Expense</span>
   </button>
   <button class="btn btn-ghost" style="justify-content:flex-start;gap:12px;padding:12px 16px"
-    onclick="closeModal();navigate('invoices');setTimeout(()=>openInvModal(null),100)">
+    onclick="closeModal();navigate('finances');setTimeout(()=>openInvModal(null),100)">
     <span style="font-family:'JetBrains Mono',monospace;font-size:14px">◻</span>
     <span>New Invoice</span>
   </button>

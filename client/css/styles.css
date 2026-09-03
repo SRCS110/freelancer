@@ -1032,3 +1032,137 @@ hr, .divider { border-color: var(--border); }
   .time-row { grid-template-columns: 1fr auto !important; padding: 10px 14px !important; }
   .time-row > span:last-child { display: none; }
 }
+
+/* ==========================================================================
+   DESKTOP WORKSPACE LAYOUT
+   Multi-column shells (list rail / main / detail rail) used by the
+   desktop-width redesign of Today, Money, Projects, Clients, Workflows,
+   Notes, Bookmarks and Tech Stack. Only rendered at window widths > 640px;
+   below that the existing mobile-hub pages take over.
+   ========================================================================== */
+
+.desk-shell { display: flex; align-items: flex-start; gap: 22px; }
+.desk-col-list {
+  flex: 0 0 260px;
+  min-width: 0;
+  position: sticky; top: 0;
+  max-height: calc(100vh - 64px);
+  overflow-y: auto;
+  border-right: 1px solid var(--border);
+  margin-right: -1px;
+}
+.desk-col-list.wide { flex-basis: 300px; }
+.desk-col-main { flex: 1; min-width: 0; }
+.desk-rail {
+  flex: 0 0 320px;
+  min-width: 0;
+  position: sticky; top: 0;
+  max-height: calc(100vh - 64px);
+  overflow-y: auto;
+}
+.desk-rail.narrow { flex-basis: 270px; }
+.desk-rail.wide   { flex-basis: 360px; }
+
+@media (max-width: 1180px) {
+  .desk-shell { flex-direction: column; }
+  .desk-col-list, .desk-rail {
+    position: static; max-height: none; overflow-y: visible;
+    flex-basis: auto; width: 100%;
+    border-right: none; border-bottom: 1px solid var(--border);
+    padding-bottom: 16px; margin-bottom: 16px;
+  }
+}
+
+/* List rail rows (Clients / Workflows / Notes / Tech Stack pickers) */
+.desk-list-row {
+  padding: 13px 16px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  cursor: pointer;
+  transition: background-color .12s;
+}
+.desk-list-row:hover  { background: color-mix(in srgb, var(--bg-raised) 70%, transparent); }
+.desk-list-row.active { background: color-mix(in srgb, var(--accent) 10%, transparent); border-left: 2px solid var(--accent); padding-left: 14px; }
+.desk-list-row-title { font-size: 13.5px; font-weight: 600; color: var(--text); }
+.desk-list-row-sub   { font-family: var(--font-mono); font-size: 11.5px; color: var(--text-muted); margin-top: 3px; }
+
+/* Stat chip row — compact metrics inline (avg days to pay, hours, etc.) */
+.desk-chip-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.desk-chip {
+  flex: 1; min-width: 110px;
+  background: var(--bg-raised); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 12px 13px;
+}
+.desk-chip-label {
+  font-family: var(--font-mono); font-size: 9.5px; font-weight: 700;
+  letter-spacing: .09em; text-transform: uppercase; color: var(--text-muted);
+  margin-bottom: 5px;
+}
+.desk-chip-val { font-family: var(--font-mono); font-size: 16px; font-weight: 700; color: var(--text); }
+
+/* Kanban-style columns (Projects) */
+.desk-kanban { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+@media (max-width: 900px) { .desk-kanban { grid-template-columns: 1fr; } }
+.desk-kanban-col { display: flex; flex-direction: column; gap: 10px; }
+.desk-kanban-label {
+  display: flex; align-items: center; gap: 8px; padding: 0 2px;
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--text-muted);
+}
+.desk-mini-card {
+  background: var(--bg-raised); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 14px 15px;
+}
+.desk-mini-card.dim { opacity: .72; }
+
+/* Timeline (Client history) */
+.desk-timeline-item { display: flex; gap: 14px; }
+.desk-timeline-rail { display: flex; flex-direction: column; align-items: center; width: 20px; flex-shrink: 0; }
+.desk-timeline-dot { width: 18px; height: 18px; border-radius: 999px; flex-shrink: 0; }
+.desk-timeline-line { flex: 1; width: 1px; background: var(--border); margin-top: 2px; }
+.desk-timeline-body { flex: 1; padding-bottom: 20px; }
+
+/* Bar sparklines (time-this-week, cash trend) */
+.desk-bars { display: flex; align-items: flex-end; gap: 7px; height: 68px; }
+.desk-bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.desk-bar { width: 100%; border-radius: 3px; background: var(--border-2); min-height: 3px; }
+.desk-bar.accent { background: var(--accent); }
+.desk-bar-tick { font-family: var(--font-mono); font-size: 9px; color: var(--text-muted); }
+
+/* Progress rows shared by Today / Projects */
+.desk-progress { height: 5px; border-radius: 999px; background: var(--border); overflow: hidden; }
+.desk-progress > span { display: block; height: 100%; background: var(--accent); border-radius: 999px; }
+
+/* Bookmarks — full-page vault lock */
+.vault-lock {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; min-height: 50vh; max-width: 320px; margin: 0 auto;
+}
+.vault-lock-icon { font-family: var(--font-mono); font-size: 30px; color: var(--accent); margin-bottom: 16px; }
+.vault-lock-title { font-family: var(--font-serif); font-size: 22px; margin-bottom: 8px; }
+.vault-lock-sub { font-size: 13px; color: var(--text-muted); line-height: 1.6; margin-bottom: 22px; }
+.vault-pin-dots { display: flex; gap: 9px; margin-bottom: 18px; }
+.vault-pin-dot {
+  width: 44px; height: 52px; border: 1px solid var(--border-2); border-radius: 10px;
+  background: var(--bg-input); display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono); font-size: 19px; color: var(--text-muted);
+}
+.vault-pin-dot.filled { color: var(--accent); border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.vault-unlocked-badge {
+  display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--money-pos);
+  margin-top: 5px;
+}
+.vault-unlocked-dot { width: 6px; height: 6px; border-radius: 999px; background: var(--money-pos); }
+.cred-reveal-inline {
+  font-family: var(--font-mono); font-size: 10.5px; font-weight: 700; color: var(--accent);
+  background: none; border: none; cursor: pointer; padding: 0;
+}
+
+/* Alert / nudge banner (tech stack unused-tool nudge, plan-vs-settings mismatch) */
+.desk-alert {
+  display: flex; align-items: center; gap: 12px;
+  padding: 13px 15px; border-radius: 11px;
+  background: color-mix(in srgb, var(--warning) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--warning) 35%, transparent);
+  font-size: 13px; color: var(--warning);
+}
+.desk-alert-icon { font-family: var(--font-mono); font-size: 12px; flex-shrink: 0; }

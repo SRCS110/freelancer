@@ -63,7 +63,17 @@ function invoicesHTML() {
 window.setInvFilter    = function(f) { window._invFilter = f; render(); };
 window.updateInvStatus = async function(id, status) {
   // Update invoice status
-  await db.update("invoices", id, { status });
+  const body = { status };
+  if (status === "Paid") body.paid_at = new Date().toISOString();
+  await db.update("invoices", id, body);
+
+  try {
+    await db.insert("invoice_activity", {
+      invoice_id: id,
+      type:       status === "Paid" ? "paid" : status === "Void" ? "void" : "sent",
+      note:       status === "Paid" ? "Marked paid" : status === "Void" ? "Invoice voided" : `Status changed to ${status}`,
+    });
+  } catch (e) { /* invoice_activity migration not applied yet — non-fatal */ }
 
   const inv = STATE.data.invoices.find(i => i.id === id);
 
@@ -210,12 +220,22 @@ window._openMailto = async function(to, subject, body, id) {
   a.click();
   setTimeout(() => document.body.removeChild(a), 100);
 
-  // Mark as Sent if still Draft
+  // Mark as Sent if still Draft, and log this send to the invoice's
+  // activity feed — a first send vs. a follow-up nudge on an
+  // already-sent invoice.
   const inv = STATE.data.invoices.find(i => i.id === id);
-  if (inv?.status === "Draft") {
+  const wasDraft = inv?.status === "Draft";
+  if (wasDraft) {
     await db.update("invoices", id, { status: "Sent" });
-    await loadAll();
   }
+  try {
+    await db.insert("invoice_activity", {
+      invoice_id: id,
+      type:       wasDraft ? "sent" : "reminder",
+      note:       wasDraft ? "Invoice emailed to client" : "Follow-up reminder emailed to client",
+    });
+  } catch (e) { /* invoice_activity migration not applied yet — non-fatal */ }
+  await loadAll();
 };
 
 window.printInvoice = async function(id) {
@@ -502,6 +522,10 @@ window.saveInv = async function(id) {
     } else {
       const created = await db.insert("invoices", body);
       invId = Array.isArray(created) ? created[0]?.id : created?.id;
+      if (invId) {
+        try { await db.insert("invoice_activity", { invoice_id: invId, type: "created", note: "Invoice created" }); }
+        catch (e) { /* invoice_activity migration not applied yet — non-fatal */ }
+      }
     }
     // Sync line items: delete old, insert new
     if (invId) {

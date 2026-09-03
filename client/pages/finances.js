@@ -319,3 +319,273 @@ window.deleteFin = async function(id) {
 };
 
 window.financesHTML = financesHTML;
+
+// ============================================================
+//  DESKTOP — Money
+//  Merges Invoices + Finances + Taxes behind one pinned nav item,
+//  with an invoice detail rail (real line items + real activity
+//  log — reminders/views/paid come from invoice_activity, written
+//  by emailInvoice/_openMailto/updateInvStatus/saveInv).
+// ============================================================
+function _avgDaysToPay() {
+  const paid = (STATE.data.invoices || []).filter(i => i.status === "Paid" && i.issued_at && i.paid_at);
+  if (!paid.length) return null;
+  const totalDays = paid.reduce((s, i) => s + Math.max(0, (new Date(i.paid_at) - new Date(i.issued_at)) / 86400000), 0);
+  return totalDays / paid.length;
+}
+
+function _moneyDeskTabBtn(id, label) {
+  const active = (window._moneyDeskTab || "invoices") === id;
+  return `<button class="filter-btn${active ? " active" : ""}" onclick="window._moneyDeskTab='${id}';render()">${label}</button>`;
+}
+
+function moneyDesktopHTML() {
+  const { invoices, finances, projects } = STATE.data;
+  const tab = window._moneyDeskTab || "invoices";
+  const avgDays = _avgDaysToPay();
+  const owed = invoices.filter(i => ["Sent","Overdue"].includes(i.status)).reduce((s,i)=>s+Number(i.amount),0);
+  const overdueCt = invoices.filter(i => i.status === "Overdue").length;
+
+  const railHTML = STATE.openInvoice && tab === "invoices" ? _moneyInvoiceRailHTML(STATE.openInvoice) : "";
+
+  return `
+<div class="page-section-header">
+  <div>
+    <div class="page-title">Money</div>
+    <div class="page-sub">${usd(owed)} owed to you${overdueCt ? ` · ${overdueCt} overdue` : ""}${avgDays != null ? ` · ${avgDays.toFixed(0)} day avg to pay` : ""}</div>
+  </div>
+  <div class="btn-row">
+    <button class="btn btn-ghost" onclick="openFinModal(null)">+ Entry</button>
+    <button class="btn btn-primary" onclick="openInvModal(null)">+ Invoice</button>
+  </div>
+</div>
+
+<div class="filter-row" style="margin-bottom:20px">
+  ${_moneyDeskTabBtn("invoices","Invoices")}
+  ${_moneyDeskTabBtn("ledger","Ledger")}
+  ${_moneyDeskTabBtn("expenses","Expenses")}
+  ${_moneyDeskTabBtn("taxes","Taxes")}
+</div>
+
+<div class="${railHTML ? "desk-shell" : ""}">
+  <div class="${railHTML ? "desk-col-main" : ""}">
+    ${tab === "invoices" ? _moneyDeskInvoicesHTML(avgDays)
+      : tab === "ledger"   ? _moneyDeskLedgerHTML()
+      : tab === "expenses" ? _moneyDeskExpensesHTML()
+      : _moneyDeskTaxesHTML()}
+  </div>
+  ${railHTML ? `<div class="desk-rail wide">${railHTML}</div>` : ""}
+</div>`;
+}
+window.moneyDesktopHTML = moneyDesktopHTML;
+
+// Copies a link to the public, read-only invoice status page
+// (status.html) — logs a 'viewed' activity row itself when opened,
+// via the public_invoice_status RPC (see docs/migrations).
+window.copyInvoiceStatusLink = function(btn, token) {
+  const url = `${location.origin}${location.pathname.replace(/[^/]*$/, "")}status.html?token=${token}`;
+  navigator.clipboard.writeText(url).then(() => {
+    if (btn) { const orig = btn.textContent; btn.textContent = "Copied!"; setTimeout(() => { btn.textContent = orig; }, 1500); }
+  }).catch(() => alert(url));
+};
+
+function _moneyDeskInvoicesHTML(avgDays) {
+  const invoices = STATE.data.invoices || [];
+  const filter = window._invFilter || "All";
+  const filtered = filter === "All" ? invoices : invoices.filter(i => i.status === filter);
+  const totals = { Draft: 0, Sent: 0, Paid: 0, Overdue: 0 };
+  invoices.forEach(i => { if (i.status in totals) totals[i.status] += Number(i.amount); });
+
+  return `
+<div class="desk-chip-row" style="margin-bottom:16px">
+  <div class="desk-chip"><div class="desk-chip-label">Overdue</div><div class="desk-chip-val" style="color:var(--danger)">${usd(totals.Overdue)}</div></div>
+  <div class="desk-chip"><div class="desk-chip-label">Sent</div><div class="desk-chip-val" style="color:var(--warning)">${usd(totals.Sent)}</div></div>
+  <div class="desk-chip"><div class="desk-chip-label">Paid</div><div class="desk-chip-val" style="color:var(--money-pos)">${usd(totals.Paid)}</div></div>
+  <div class="desk-chip"><div class="desk-chip-label">Avg days to pay</div><div class="desk-chip-val">${avgDays != null ? avgDays.toFixed(0) : "—"}</div></div>
+</div>
+
+<div class="filter-row" style="margin-bottom:14px">
+  ${["All","Draft","Sent","Paid","Overdue","Void"].map(s =>
+    `<button class="filter-btn${filter === s ? " active" : ""}" onclick="setInvFilter('${s}')">${s}</button>`
+  ).join("")}
+</div>
+
+${filtered.length === 0
+  ? `<div class="empty"><div class="empty-text">No invoices here.</div></div>`
+  : `<div style="background:var(--bg-raised);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
+    ${filtered.map(inv => {
+      const active = STATE.openInvoice?.id === inv.id;
+      return `
+    <div class="desk-list-row${active ? " active" : ""}" style="display:flex;align-items:center;gap:14px" onclick='openInvoice(${JSON.stringify(inv).replace(/'/g,"&#39;")})'>
+      <div style="flex:1;min-width:0">
+        <div class="desk-list-row-title">${inv.invoice_number} <span style="color:var(--text-muted);font-weight:500">${inv.client_name || ""}</span></div>
+        <div class="desk-list-row-sub">${inv.due_date ? "due " + fmtDate(inv.due_date) : "no due date"}</div>
+      </div>
+      ${badge(inv.status)}
+      <div style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--text);width:90px;text-align:right">${usd(inv.amount)}</div>
+    </div>`;
+    }).join("")}
+    </div>`}`;
+}
+
+function _moneyInvoiceRailHTML(inv) {
+  const items = (STATE.data.invoice_items || []).filter(it => it.invoice_id === inv.id).sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
+  const activity = (STATE.data.invoice_activity || []).filter(a => a.invoice_id === inv.id).sort((a,b)=> new Date(b.created_at) - new Date(a.created_at));
+  const statusColor = { Overdue: "var(--danger)", Sent: "var(--warning)", Paid: "var(--money-pos)", Draft: "var(--text-muted)", Void: "var(--text-muted)" };
+  const activityIcon = { created: "◇", sent: "◻", reminder: "↻", viewed: "◉", paid: "✓", void: "×" };
+  const activityColor = { created: "var(--text-muted)", sent: "var(--accent)", reminder: "var(--warning)", viewed: "var(--text-muted)", paid: "var(--money-pos)", void: "var(--danger)" };
+
+  return `
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+  <span style="font-family:var(--font-mono);font-size:11px;color:var(--accent);cursor:pointer" onclick="closeInvoiceDetail()">← close</span>
+  ${badge(inv.status)}
+</div>
+<div style="font-family:var(--font-serif);font-size:23px;margin-bottom:4px">${inv.invoice_number}</div>
+<div style="font-size:13px;color:var(--text-muted);margin-bottom:16px">${inv.client_name || "No client"}</div>
+<div style="font-family:var(--font-mono);font-size:30px;font-weight:700;letter-spacing:-0.02em;margin-bottom:18px">${usd(inv.amount)}</div>
+
+${items.length ? `
+<div style="display:flex;flex-direction:column;gap:1px;background:var(--bg-raised);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:18px">
+  ${items.map(it => `
+  <div style="display:flex;gap:12px;padding:11px 13px;border-bottom:1px solid var(--border)">
+    <span style="flex:1;font-size:12.5px;color:var(--text)">${it.description}</span>
+    <span style="font-family:var(--font-mono);font-size:12.5px;color:var(--text)">${usd(it.amount ?? (Number(it.quantity||1)*Number(it.unit_price||0)))}</span>
+  </div>`).join("")}
+</div>` : ""}
+
+<div style="display:flex;gap:8px;margin-bottom:20px">
+  ${inv.status !== "Paid" && inv.status !== "Void" ? `<button class="btn btn-ghost" style="flex:1" onclick="updateInvStatus('${inv.id}','Paid')">✓ Mark paid</button>` : ""}
+  <button class="btn btn-ghost" style="flex:1" onclick="openInvModal('${inv.id}')">Edit</button>
+</div>
+
+<div style="background:var(--bg-raised);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:18px">
+  <div style="font-family:var(--font-serif);font-size:16px;margin-bottom:4px">Send a nudge</div>
+  <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">${inv.client_name ? `Emails ${inv.client_name} with the PDF attached.` : "Emails the client with the PDF attached."}</div>
+  <div style="display:flex;gap:8px">
+    <button class="btn btn-primary" style="flex:1" onclick="emailInvoice('${inv.id}')">Send reminder</button>
+    <button class="btn btn-ghost" onclick="printInvoice('${inv.id}')">PDF</button>
+  </div>
+  ${inv.public_token ? `<button class="btn btn-ghost" style="width:100%;margin-top:8px" onclick="copyInvoiceStatusLink(this,'${inv.public_token}')">Copy status link</button>` : ""}
+</div>
+
+<div style="font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:11px">Activity</div>
+${activity.length === 0
+  ? `<div style="font-size:12.5px;color:var(--text-muted)">No activity logged yet.</div>`
+  : activity.map(a => `
+  <div class="desk-timeline-item">
+    <div class="desk-timeline-rail">
+      <div class="desk-timeline-dot" style="background:${activityColor[a.type]||'var(--text-muted)'};display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--bg)">${activityIcon[a.type]||"·"}</div>
+      <div class="desk-timeline-line"></div>
+    </div>
+    <div class="desk-timeline-body">
+      <div style="font-size:12.5px;color:var(--text)">${a.note || a.type}</div>
+      <div style="font-family:var(--font-mono);font-size:10.5px;color:var(--text-muted);margin-top:2px">${fmtDate(a.created_at)}</div>
+    </div>
+  </div>`).join("")}`;
+}
+
+function _moneyDeskLedgerHTML() {
+  const finances = STATE.data.finances || [];
+  const period = window._finPeriod || "this_month";
+  const periodEntries = _filterByPeriod(finances, period);
+  const income = periodEntries.filter(f=>f.type==="income").reduce((s,f)=>s+Number(f.amount),0);
+  const expense = periodEntries.filter(f=>f.type==="expense").reduce((s,f)=>s+Number(f.amount),0);
+  const recent = [...periodEntries].sort((a,b)=> new Date(b.date)-new Date(a.date));
+
+  return `
+<div class="filter-row" style="margin-bottom:14px">
+  ${Object.entries(PERIOD_LABELS).map(([k,label]) => `<button class="filter-btn${period===k?" active":""}" onclick="setFinPeriod('${k}')">${label}</button>`).join("")}
+</div>
+<div class="desk-chip-row" style="margin-bottom:16px">
+  <div class="desk-chip"><div class="desk-chip-label">Income</div><div class="desk-chip-val" style="color:var(--money-pos)">${usd(income)}</div></div>
+  <div class="desk-chip"><div class="desk-chip-label">Expenses</div><div class="desk-chip-val" style="color:var(--danger)">${usd(expense)}</div></div>
+  <div class="desk-chip"><div class="desk-chip-label">Net</div><div class="desk-chip-val" style="color:${(income-expense)>=0?'var(--money-pos)':'var(--danger)'}">${usd(income-expense)}</div></div>
+</div>
+${recent.length === 0
+  ? `<div class="empty"><div class="empty-text">No entries this period.</div></div>`
+  : `<div style="background:var(--bg-raised);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
+    ${recent.map(f => `
+    <div class="desk-list-row" style="display:flex;align-items:center;gap:14px" onclick="openFinModal('${f.id}')">
+      <div style="flex:1;min-width:0">
+        <div class="desk-list-row-title">${f.description || f.category}</div>
+        <div class="desk-list-row-sub">${fmtDate(f.date)} · ${f.category}${(STATE.data.projects||[]).find(p=>p.id===f.project_id) ? " · " + STATE.data.projects.find(p=>p.id===f.project_id).name : ""}</div>
+      </div>
+      <div style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:${f.type==='income'?'var(--money-pos)':'var(--danger)'}">${f.type==='income'?'+':'-'}${usd(f.amount)}</div>
+    </div>`).join("")}
+    </div>`}`;
+}
+
+function _moneyDeskExpensesHTML() {
+  const finances = (STATE.data.finances || []).filter(f => f.type === "expense");
+  const period = window._finPeriod || "this_month";
+  const periodEntries = _filterByPeriod(finances, period);
+  const total = periodEntries.reduce((s,f)=>s+Number(f.amount),0);
+  const byCat = TAX_CATS.map(cat => ({ cat, total: periodEntries.filter(f=>f.category===cat).reduce((s,f)=>s+Number(f.amount),0) })).filter(c=>c.total>0);
+
+  return `
+<div class="filter-row" style="margin-bottom:14px">
+  ${Object.entries(PERIOD_LABELS).map(([k,label]) => `<button class="filter-btn${period===k?" active":""}" onclick="setFinPeriod('${k}')">${label}</button>`).join("")}
+</div>
+<div class="card" style="margin-bottom:16px">
+  <div class="card-label">Total expenses</div>
+  <div class="card-value" style="color:var(--danger)">${usd(total)}</div>
+  <div class="card-sub">${PERIOD_LABELS[period]}</div>
+</div>
+${byCat.length ? `
+<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px">
+  ${byCat.sort((a,b)=>b.total-a.total).map(c => `
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 13px;background:var(--bg-raised);border:1px solid var(--border);border-radius:var(--radius-sm)">
+    <span style="font-size:13px;color:var(--text-muted)">${c.cat}</span>
+    <span style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--danger)">${usd(c.total)}</span>
+  </div>`).join("")}
+</div>` : ""}
+${periodEntries.length === 0
+  ? `<div class="empty"><div class="empty-text">No expenses this period.</div></div>`
+  : `<div style="background:var(--bg-raised);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
+    ${[...periodEntries].sort((a,b)=>new Date(b.date)-new Date(a.date)).map(f => `
+    <div class="desk-list-row" style="display:flex;align-items:center;gap:14px" onclick="openFinModal('${f.id}')">
+      <div style="flex:1;min-width:0">
+        <div class="desk-list-row-title">${f.description || f.category}</div>
+        <div class="desk-list-row-sub">${fmtDate(f.date)}</div>
+      </div>
+      <div style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--danger)">-${usd(f.amount)}</div>
+    </div>`).join("")}
+    </div>`}`;
+}
+
+function _moneyDeskTaxesHTML() {
+  const finances = STATE.data.finances || [];
+  const period = window._finPeriod || "this_month";
+  const periodEntries = _filterByPeriod(finances, period);
+  const income = periodEntries.filter(f=>f.type==="income").reduce((s,f)=>s+Number(f.amount),0);
+  const expense = periodEntries.filter(f=>f.type==="expense").reduce((s,f)=>s+Number(f.amount),0);
+  const taxRate = (STATE.data.user_settings?.tax_rate ?? 25) / 100;
+  const tax = Math.max(0, (income-expense) * taxRate);
+  const catTotals = TAX_CATS.map(cat => {
+    const entries = periodEntries.filter(f=>f.category===cat);
+    return { cat, income: entries.filter(f=>f.type==="income").reduce((s,f)=>s+Number(f.amount),0), expense: entries.filter(f=>f.type==="expense").reduce((s,f)=>s+Number(f.amount),0) };
+  }).filter(c=>c.income>0||c.expense>0);
+
+  return `
+<div class="filter-row" style="margin-bottom:14px">
+  ${Object.entries(PERIOD_LABELS).map(([k,label]) => `<button class="filter-btn${period===k?" active":""}" onclick="setFinPeriod('${k}')">${label}</button>`).join("")}
+</div>
+<div class="card" style="margin-bottom:20px">
+  <div class="card-label">Estimated tax (${Math.round(taxRate*100)}%)</div>
+  <div class="card-value" style="color:var(--warning);font-size:28px">${usd(tax)}</div>
+  <div class="card-sub">Net profit ${usd(income-expense)} · ${PERIOD_LABELS[period]}</div>
+</div>
+<div style="font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:11px">By tax category</div>
+${catTotals.length === 0
+  ? `<div class="empty"><div class="empty-text">No entries this period.</div></div>`
+  : `<div style="display:flex;flex-direction:column;gap:8px">
+    ${catTotals.map(c => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 13px;background:var(--bg-raised);border:1px solid var(--border);border-radius:var(--radius-sm)">
+      <span style="font-size:13px;color:var(--text-muted)">${c.cat}</span>
+      <div style="display:flex;gap:12px">
+        ${c.income>0?`<span style="font-family:var(--font-mono);font-size:12.5px;font-weight:700;color:var(--money-pos)">+${usd(c.income)}</span>`:""}
+        ${c.expense>0?`<span style="font-family:var(--font-mono);font-size:12.5px;font-weight:700;color:var(--danger)">-${usd(c.expense)}</span>`:""}
+      </div>
+    </div>`).join("")}
+    </div>`}`;
+}

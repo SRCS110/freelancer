@@ -11,8 +11,11 @@ const DOC_TYPES = ["Service Agreement", "Contract", "Content Form", "Proposal", 
 function clientsHTML() {
   const { clients } = STATE.data;
 
-  if (window._openClientId) return clientFileHTML(window._openClientId);
-  if (window.innerWidth <= 640) return _clientsMobileHTML(clients);
+  if (window.innerWidth <= 640) {
+    if (window._openClientId) return clientFileHTML(window._openClientId);
+    return _clientsMobileHTML(clients);
+  }
+  if (window.clientsDesktopHTML) return clientsDesktopHTML(clients);
 
   return `
 <div class="page-section-header">
@@ -147,29 +150,21 @@ window.renderClientSearch = function(q) {
     }).join("");
     return;
   }
-  container.innerHTML = filtered.map(c => {
-    const projects = (STATE.data.projects || []).filter(p => p.client_id === c.id);
-    const docs     = (STATE.data.client_documents || []).filter(d => d.client_id === c.id);
-    return `
-    <div style="background:var(--bg-raised);border:1px solid var(--border);border-radius:10px;padding:18px;cursor:pointer;transition:border-color .15s"
-      onclick="openClientFile('${c.id}')"
-      onmouseover="this.style.borderColor='color-mix(in srgb,var(--accent) 40%,transparent)'"
-      onmouseout="this.style.borderColor='var(--border)'">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:10px">
-        <div>
-          <div style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--text)">${c.name}</div>
-          ${c.company ? `<div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-muted);margin-top:2px">${c.company}</div>` : ""}
-        </div>
-        ${badge(c.status)}
-      </div>
-      ${c.email ? `<div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);margin-bottom:4px">${c.email}</div>` : ""}
-      <div style="display:flex;gap:12px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
-        <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted)">◫ ${projects.length} project${projects.length !== 1 ? "s" : ""}</span>
-        <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-muted)">◻ ${docs.length} doc${docs.length !== 1 ? "s" : ""}</span>
-      </div>
-    </div>`;
-  }).join("");
+  const selectedId = window._deskSelectedClientId;
+  container.innerHTML = filtered.map(c => _clientDeskRowHTML(c, c.id === selectedId)).join("");
 };
+
+// Shared row renderer for the desktop client list rail (initial render + live search)
+function _clientDeskRowHTML(c, isSelected) {
+  const invoices  = (STATE.data.invoices || []).filter(i => i.client_id === c.id);
+  const owed = invoices.filter(i => ["Sent","Overdue"].includes(i.status)).reduce((s,i)=>s+Number(i.amount),0);
+  const late = invoices.some(i => i.status === "Overdue");
+  return `
+  <div class="desk-list-row${isSelected ? " active" : ""}" onclick="window._deskSelectedClientId='${c.id}';render()">
+    <div class="desk-list-row-title">${c.name}</div>
+    <div class="desk-list-row-sub" style="color:${late?'var(--danger)':'var(--text-muted)'}">${owed>0 ? usd(owed) + (late?" overdue":" open") : (c.company || c.status)}</div>
+  </div>`;
+}
 
 window.openClientFile = function(id) {
   window._openClientId = id;
@@ -495,3 +490,158 @@ window.deleteDoc = async function(id) {
 
 window.clientsHTML    = clientsHTML;
 window.clientFileHTML = clientFileHTML;
+
+// ============================================================
+//  DESKTOP — Clients
+//  List rail + detail panel. History is composed from real,
+//  already-timestamped records (invoice_activity + project
+//  creation) rather than a fabricated event log.
+// ============================================================
+function _clientAvgDaysToPay(clientId) {
+  const paid = (STATE.data.invoices || []).filter(i => i.client_id === clientId && i.status === "Paid" && i.issued_at && i.paid_at);
+  if (!paid.length) return null;
+  const total = paid.reduce((s,i)=> s + Math.max(0,(new Date(i.paid_at) - new Date(i.issued_at))/86400000), 0);
+  return total / paid.length;
+}
+
+function _clientHoursLogged(clientId) {
+  const projectIds = (STATE.data.projects || []).filter(p => p.client_id === clientId).map(p => p.id);
+  const entries = (STATE.data.time_entries || []).filter(t => projectIds.includes(t.project_id));
+  return entries.reduce((s,t)=> s + entryMinutes(t), 0) / 60;
+}
+
+function _clientHistory(c) {
+  const invoices = (STATE.data.invoices || []).filter(i => i.client_id === c.id);
+  const invIds = invoices.map(i => i.id);
+  const activity = (STATE.data.invoice_activity || []).filter(a => invIds.includes(a.invoice_id));
+  const projects = (STATE.data.projects || []).filter(p => p.client_id === c.id);
+
+  const events = [
+    ...activity.map(a => {
+      const inv = invoices.find(i => i.id === a.invoice_id);
+      return { date: a.created_at, label: `${a.note || a.type}${inv ? " — " + inv.invoice_number : ""}`, type: a.type };
+    }),
+    ...projects.filter(p => p.created_at).map(p => ({ date: p.created_at, label: `Project started — ${p.name}`, type: "project" })),
+    ...(c.created_at ? [{ date: c.created_at, label: "Became a client", type: "client" }] : []),
+  ];
+  return events.filter(e => e.date).sort((a,b) => new Date(b.date) - new Date(a.date)).slice(0, 12);
+}
+
+function clientsDesktopHTML(clients) {
+  const selectedId = window._deskSelectedClientId || clients[0]?.id;
+  const selected = clients.find(c => c.id === selectedId);
+  const invoices = STATE.data.invoices || [];
+
+  return `
+<div class="page-section-header">
+  <div>
+    <div class="page-title">Clients</div>
+    <div class="page-sub">${clients.length} client${clients.length!==1?"s":""} on record</div>
+  </div>
+  <button class="btn btn-primary" onclick="openClientModal(null)">+ New Client</button>
+</div>
+
+<div class="desk-shell">
+  <div class="desk-col-list">
+    <div style="padding:0 4px 12px">
+      <input id="client-search" placeholder="search clients…" oninput="renderClientSearch(this.value)"/>
+    </div>
+    <div id="client-list-container">
+    ${clients.length === 0
+      ? `<div style="font-size:12px;color:var(--text-muted);padding:8px 4px">no clients yet.</div>`
+      : clients.map(c => _clientDeskRowHTML(c, c.id===selectedId)).join("")}
+    </div>
+  </div>
+
+  <div class="desk-col-main">
+    ${selected ? _clientDetailPanelHTML(selected) : `<div class="empty"><div class="empty-text">select a client.</div></div>`}
+  </div>
+</div>`;
+}
+window.clientsDesktopHTML = clientsDesktopHTML;
+
+function _clientDetailPanelHTML(c) {
+  const projects  = (STATE.data.projects || []).filter(p => p.client_id === c.id);
+  const invoices  = (STATE.data.invoices || []).filter(i => i.client_id === c.id);
+  const owedNow   = invoices.filter(i => ["Sent","Overdue"].includes(i.status)).reduce((s,i)=>s+Number(i.amount),0);
+  const totalBilled = invoices.reduce((s,i)=>s+Number(i.amount),0);
+  const avgDays   = _clientAvgDaysToPay(c.id);
+  const hours     = _clientHoursLogged(c.id);
+  const history   = _clientHistory(c);
+
+  return `
+<div style="display:flex;align-items:center;gap:16px;margin-bottom:20px">
+  <div style="width:52px;height:52px;border-radius:999px;background:var(--bg-raised);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:16px;color:var(--accent);flex-shrink:0">${_initials(c.name)}</div>
+  <div style="flex:1;min-width:0">
+    <div style="display:flex;align-items:center;gap:10px"><div style="font-family:var(--font-serif);font-size:22px">${c.name}</div>${badge(c.status)}</div>
+    <div style="font-size:12.5px;color:var(--text-muted);margin-top:2px">${[c.company, c.email, c.created_at ? "client since " + fmtDate(c.created_at) : null].filter(Boolean).join(" · ")}</div>
+  </div>
+  <div class="btn-row" style="flex-shrink:0">
+    ${c.email ? `<a href="mailto:${c.email}" class="btn btn-ghost" style="text-decoration:none">Email</a>` : ""}
+    <button class="btn btn-primary" onclick="navigate('finances');setTimeout(()=>openInvModal(null),100)">New invoice</button>
+    <button class="btn btn-ghost" onclick="openClientModal('${c.id}')">Edit</button>
+  </div>
+</div>
+
+<div class="desk-chip-row" style="margin-bottom:24px">
+  <div class="desk-chip"><div class="desk-chip-label">Billed lifetime</div><div class="desk-chip-val">${usd(totalBilled)}</div></div>
+  <div class="desk-chip"><div class="desk-chip-label">Owed now</div><div class="desk-chip-val" style="color:${owedNow>0?'var(--danger)':'var(--money-pos)'}">${usd(owedNow)}</div></div>
+  <div class="desk-chip"><div class="desk-chip-label">Avg days to pay</div><div class="desk-chip-val">${avgDays!=null?avgDays.toFixed(0):"—"}</div></div>
+  <div class="desk-chip"><div class="desk-chip-label">Hours logged</div><div class="desk-chip-val">${hours.toFixed(0)}</div></div>
+</div>
+
+<div class="desk-shell">
+  <div class="desk-col-main">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:11px">
+      <div style="font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted)">Projects</div>
+      <span onclick="navigate('projects')" style="font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--accent);cursor:pointer">+ new</span>
+    </div>
+    ${projects.length === 0
+      ? `<div style="font-size:12px;color:var(--text-muted);margin-bottom:22px">no projects yet.</div>`
+      : `<div style="background:var(--bg-raised);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:24px">
+      ${projects.map(p => `
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--border);cursor:pointer" onclick='openProject(${JSON.stringify(p).replace(/'/g,"&#39;")})'>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600;color:var(--text)">${p.name}</div>
+          ${p.deadline ? `<div style="font-family:var(--font-mono);font-size:10.5px;color:var(--text-muted);margin-top:2px">due ${fmtDate(p.deadline)}</div>` : ""}
+        </div>
+        ${badge(p.status)}
+      </div>`).join("")}
+      </div>`}
+
+    <div style="font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:11px">Invoices</div>
+    ${invoices.length === 0
+      ? `<div style="font-size:12px;color:var(--text-muted)">no invoices yet.</div>`
+      : `<div style="background:var(--bg-raised);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
+      ${invoices.map(i => `
+      <div class="desk-list-row" style="display:flex;align-items:center;gap:14px" onclick='openInvoice(${JSON.stringify(i).replace(/'/g,"&#39;")})'>
+        <div style="flex:1;min-width:0">
+          <div class="desk-list-row-title">${i.invoice_number}</div>
+          <div class="desk-list-row-sub">${i.due_date ? "due " + fmtDate(i.due_date) : "—"}</div>
+        </div>
+        ${badge(i.status)}
+        <div style="font-family:var(--font-mono);font-size:13px;font-weight:700;width:80px;text-align:right">${usd(i.amount)}</div>
+      </div>`).join("")}
+      </div>`}
+  </div>
+
+  <div class="desk-rail narrow">
+    <div style="font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:11px">History</div>
+    ${history.length === 0
+      ? `<div style="font-size:12px;color:var(--text-muted);margin-bottom:22px">nothing recorded yet.</div>`
+      : `<div style="margin-bottom:22px">${history.map(e => `
+    <div class="desk-timeline-item">
+      <div class="desk-timeline-rail"><div class="desk-timeline-dot" style="background:var(--border-2)"></div><div class="desk-timeline-line"></div></div>
+      <div class="desk-timeline-body">
+        <div style="font-size:12px;color:var(--text)">${e.label}</div>
+        <div style="font-family:var(--font-mono);font-size:10.5px;color:var(--text-muted);margin-top:2px">${fmtDate(e.date)}</div>
+      </div>
+    </div>`).join("")}</div>`}
+
+    <div style="font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:11px">Notes</div>
+    <div class="card" style="cursor:pointer" onclick="openClientModal('${c.id}')">
+      ${c.notes ? `<div style="font-size:12.5px;color:var(--text);line-height:1.6;white-space:pre-wrap">${c.notes}</div>` : `<div style="font-size:12.5px;color:var(--text-muted)">click to add notes.</div>`}
+    </div>
+  </div>
+</div>`;
+}

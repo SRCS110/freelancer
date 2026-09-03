@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Invoice Status</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+
+<!-- Supabase JS v2 — must load synchronously before auth.js -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="client/js/auth.js"></script>
+
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+:root {
+  --bg:        #191310;
+  --bg-raised: #221A16;
+  --bg-input:  #2C221B;
+  --border:    #34281F;
+  --border-2:  #46362A;
+  --text:      #F6EEE7;
+  --text-muted:#A9998E;
+  --accent:    #FF7E5E;
+  --accent-fg: #2A1006;
+  --danger:    #FF6B5E;
+  --warning:   #e8b667;
+  --money-pos: #7FE3B8;
+}
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Figtree', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.card {
+  width: 100%;
+  max-width: 460px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 32px 30px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.35);
+}
+.wordmark {
+  display: flex; align-items: center; gap: 9px;
+  font-family: 'JetBrains Mono', monospace; font-size: 15px; color: var(--accent);
+  margin-bottom: 26px;
+}
+.status-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 11px; border-radius: 999px;
+  font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .04em;
+  margin-bottom: 14px;
+}
+.label {
+  font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.amount {
+  font-family: 'JetBrains Mono', monospace; font-size: 40px; font-weight: 700;
+  letter-spacing: -0.02em; margin-bottom: 22px;
+}
+.row { display: flex; justify-content: space-between; padding: 12px 0; border-top: 1px solid var(--border); font-size: 13.5px; }
+.row:first-of-type { border-top: none; }
+.row span:first-child { color: var(--text-muted); }
+.muted { color: var(--text-muted); font-size: 12.5px; line-height: 1.6; margin-top: 22px; text-align: center; }
+.spinner {
+  width: 24px; height: 24px; margin: 40px auto;
+  border: 2px solid rgba(255,126,94,.25); border-top-color: var(--accent);
+  border-radius: 50%; animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.error { text-align: center; padding: 20px 0; }
+.error-icon { font-family: 'JetBrains Mono', monospace; font-size: 28px; color: var(--text-muted); margin-bottom: 10px; }
+</style>
+</head>
+<body>
+
+<div class="card" id="status-card">
+  <div class="wordmark"><span>◆</span><span id="biz-name">Loading…</span></div>
+  <div class="spinner" id="spinner"></div>
+</div>
+
+<script>
+const STATUS_COLOR = {
+  Overdue: "var(--danger)", Sent: "var(--warning)", Paid: "var(--money-pos)",
+  Draft: "var(--text-muted)", Void: "var(--text-muted)",
+};
+
+function usd(n) {
+  return "$" + Number(n || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function fmtDate(d) {
+  if (!d) return "—";
+  return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+async function loadStatus() {
+  const card = document.getElementById("status-card");
+  const token = new URLSearchParams(window.location.search).get("token");
+
+  if (!token || !window.hasConfig || !hasConfig()) {
+    return renderError("This link is missing or invalid.");
+  }
+
+  try {
+    const client = Auth.getClient();
+    const { data, error } = await client.rpc("public_invoice_status", { token });
+    if (error) throw error;
+    const inv = Array.isArray(data) ? data[0] : data;
+    if (!inv) return renderError("We couldn't find an invoice for this link.");
+    renderInvoice(inv);
+  } catch (e) {
+    renderError("This status page isn't set up yet — ask the sender to check their invoice link.");
+  }
+}
+
+function renderInvoice(inv) {
+  document.getElementById("biz-name").textContent = inv.business_name || "Invoice";
+  const color = STATUS_COLOR[inv.status] || "var(--text-muted)";
+  document.getElementById("status-card").innerHTML = `
+    <div class="wordmark"><span>◆</span><span>${inv.business_name || "Invoice"}</span></div>
+    <div class="status-pill" style="background:color-mix(in srgb, ${color} 15%, transparent); color:${color}; border:1px solid color-mix(in srgb, ${color} 35%, transparent)">${inv.status}</div>
+    <div class="label">${inv.invoice_number}${inv.client_name ? " · " + inv.client_name : ""}</div>
+    <div class="amount">${usd(inv.amount)}</div>
+    <div class="row"><span>Issued</span><span>${fmtDate(inv.issued_at)}</span></div>
+    <div class="row"><span>Due</span><span>${fmtDate(inv.due_date)}</span></div>
+    <div class="muted">This is a read-only status page. Reach out to ${inv.business_name || "the sender"} directly with any questions.</div>
+  `;
+}
+
+function renderError(msg) {
+  document.getElementById("status-card").innerHTML = `
+    <div class="wordmark"><span>◆</span><span>Invoice status</span></div>
+    <div class="error">
+      <div class="error-icon">◇</div>
+      <div style="font-size:14px;color:var(--text-muted)">${msg}</div>
+    </div>
+  `;
+}
+
+// auth.js only defines config/client helpers here — it does not
+// redirect or require a session, so it's safe on a public page.
+loadStatus();
+</script>
+</body>
+</html>

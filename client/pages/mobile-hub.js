@@ -124,7 +124,10 @@ function _workspaceSnapshot() {
       badge: running ? "running" : (todayMin ? fmtDur(todayMin) + " today" : "idle"),
       badgeColor: running ? "var(--money-pos)" : "var(--text-muted)" },
     { page: "workflows",  icon: "◳", label: "Workflows", badge: `${runs.length} active` },
-    { page: "brainstorm", icon: "◆", label: "Notes",     badge: `${notes.length}` },
+    { page: "brainstorm", icon: "✎", label: "Notes",     badge: `${notes.length}` },
+    { page: "bookmarks",  icon: "◈", label: "Bookmarks",
+      badge: (typeof hasPinSet === "function" && hasPinSet()) ? "◆ locked" : `${(d.bookmarks || []).length}`,
+      badgeColor: (typeof hasPinSet === "function" && hasPinSet()) ? "var(--warning)" : "var(--text-muted)" },
     { page: "tech-stack", icon: "◳", label: "Stack",
       badge: usd(stack.filter(t => t.cycle === "monthly")
                       .reduce((a, t) => a + Number(t.amount || 0), 0)) + "/mo" },
@@ -587,6 +590,7 @@ function timerHTML() {
 
   const proj  = (STATE.data.projects || []).find(p => p.id === running.project_id);
   const rate  = Number(running.hourly_rate) || 0;
+  const paused = typeof isEntryPaused === "function" && isEntryPaused(running);
   const today = new Date().toISOString().slice(0, 10);
   const earlier = (STATE.data.time_entries || [])
     .filter(t => t.ended_at && t.started_at?.slice(0, 10) === today)
@@ -598,14 +602,19 @@ function timerHTML() {
 
 <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:36px 20px 24px;text-align:center">
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-    <span style="width:8px;height:8px;border-radius:9999px;background:var(--money-pos);animation:fhpulse 1.6s ease-in-out infinite"></span>
-    <span style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--money-pos)">Recording</span>
+    <span style="width:8px;height:8px;border-radius:9999px;background:${paused ? "var(--warning)" : "var(--money-pos)"};${paused ? "" : "animation:fhpulse 1.6s ease-in-out infinite"}"></span>
+    <span style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:${paused ? "var(--warning)" : "var(--money-pos)"}">${paused ? "Paused" : "Recording"}</span>
   </div>
   <div style="font-family:'JetBrains Mono',monospace;font-size:48px;font-weight:700;letter-spacing:-0.03em;line-height:1" data-timer-clock>${fmtDur(entryMinutes(running))}</div>
   <div style="font-size:15px;font-weight:600;margin-top:8px;cursor:pointer" onclick="${proj ? `openProject(${JSON.stringify(proj).replace(/"/g, "&quot;")})` : ""}">${running.description || proj?.name || "Untitled"}</div>
   <div style="font-size:13px;color:var(--text-muted)">${[proj?.client_name, rate ? usd(rate) + "/hr" : null].filter(Boolean).join(" · ")}</div>
   ${rate ? `<div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--money-pos);margin-top:4px">${usd(entryValue(running))} earned</div>` : ""}
-  <button class="btn btn-primary" style="margin-top:20px;width:100%;max-width:280px" onclick="stopTimer()">Stop &amp; log</button>
+  <div style="display:flex;gap:10px;margin-top:20px;width:100%;max-width:280px">
+    ${paused
+      ? `<button class="btn btn-primary" style="flex:1" onclick="resumeTimer('${running.id}')">Resume</button>`
+      : `<button class="btn btn-ghost" style="flex:1" onclick="pauseTimer('${running.id}')">Pause</button>`}
+    <button class="btn btn-danger" style="flex:1" onclick="stopTimer()">Stop</button>
+  </div>
 </div>
 
 ${earlier.length ? `

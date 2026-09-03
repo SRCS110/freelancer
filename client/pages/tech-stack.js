@@ -192,3 +192,102 @@ window.filterStack = function(q) {
 };
 
 window.techStackHTML = techStackHTML;
+
+// ============================================================
+//  DESKTOP — Tech Stack
+//  Table + a right rail of real derived analytics: spend by
+//  category and renewals due in the next 30 days (from
+//  renewal_date — no invented "last used" or "rebilled" fields).
+// ============================================================
+function techStackDesktopHTML() {
+  const stack = STATE.data.tech_stack || [];
+  const monthly = stack.filter(s=>s.cycle==="monthly").reduce((s,x)=>s+Number(x.amount),0);
+  const annual  = stack.filter(s=>s.cycle==="annual").reduce((s,x)=>s+Number(x.amount),0);
+  const oneTime = stack.filter(s=>s.cycle==="one-time").reduce((s,x)=>s+Number(x.amount),0);
+  const annualTotal = monthly*12 + annual + oneTime;
+
+  const byCat = {};
+  stack.forEach(s => { byCat[s.category] = (byCat[s.category]||0) + (s.cycle==="monthly" ? Number(s.amount) : 0); });
+  const catRows = Object.entries(byCat).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
+  const maxCat = Math.max(1, ...catRows.map(([,v])=>v));
+
+  const soon = stack.filter(s => s.renewal_date).map(s => ({
+    ...s, days: Math.round((new Date(s.renewal_date) - new Date()) / 86400000)
+  })).filter(s => s.days >= 0 && s.days <= 30).sort((a,b)=>a.days-b.days);
+
+  return `
+<div class="page-section-header">
+  <div>
+    <div class="page-title">Tech Stack</div>
+    <div class="page-sub">${stack.length} subscription${stack.length!==1?"s":""} · ${usd(monthly)}/mo</div>
+  </div>
+  <div class="btn-row">
+    <input id="stack-search" placeholder="search tools…" style="width:220px" oninput="filterStackDesktop(this.value)"/>
+    <button class="btn btn-primary" onclick="openStackModal(null)">+ Add tool</button>
+  </div>
+</div>
+
+<div class="desk-shell">
+  <div class="desk-col-main">
+    ${stack.length === 0
+      ? `<div class="empty"><div class="empty-text">no services tracked yet.</div></div>`
+      : `<div id="stack-desk-rows" style="background:var(--bg-raised);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
+        ${stack.map(s => `
+        <div class="desk-stack-row" style="display:flex;align-items:center;gap:16px;padding:14px 16px;border-bottom:1px solid var(--border)">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13.5px;font-weight:600">${s.name}</div>
+            <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);margin-top:2px">${s.category}${s.description ? " · " + s.description : ""}</div>
+          </div>
+          <div style="width:110px;font-size:12.5px;color:var(--text-muted)">${s.category}</div>
+          <div style="width:90px;text-align:right;font-family:var(--font-mono);font-size:12px;color:${s.renewal_date ? "var(--text-muted)" : "var(--border-2)"}">${s.renewal_date ? fmtDate(s.renewal_date).replace(/, \d{4}$/,"") : "—"}</div>
+          <div style="width:80px;text-align:right;font-family:var(--font-mono);font-size:13.5px;font-weight:700">${usd(s.amount)}</div>
+          <div style="display:flex;gap:6px;flex-shrink:0">
+            <button class="btn btn-ghost btn-sm" onclick="openStackModal('${s.id}')" style="font-size:10px;padding:4px 8px">edit</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteStack('${s.id}')" style="font-size:10px;padding:4px 8px">×</button>
+          </div>
+        </div>`).join("")}
+        </div>`}
+
+    ${soon.length ? `
+    <div class="desk-alert" style="margin-top:16px">
+      <span class="desk-alert-icon">!</span>
+      <span style="flex:1">${soon[0].name} renews in ${soon[0].days} day${soon[0].days!==1?"s":""} — ${usd(soon[0].amount)}.</span>
+    </div>` : ""}
+  </div>
+
+  <div class="desk-rail narrow">
+    <div style="font-size:12.5px;color:var(--text-muted);margin-bottom:4px">Monthly spend</div>
+    <div style="font-family:var(--font-mono);font-size:34px;font-weight:700;line-height:1;letter-spacing:-0.03em;margin-bottom:6px">${usd(monthly)}</div>
+    <div style="font-size:12.5px;color:var(--text-muted);margin-bottom:22px">${usd(annualTotal)} a year est.</div>
+
+    ${catRows.length ? `
+    <div style="font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:11px">By category</div>
+    <div style="display:flex;flex-direction:column;gap:13px;margin-bottom:24px">
+      ${catRows.map(([cat,val]) => `
+      <div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:5px"><span style="font-size:12.5px">${cat}</span><span style="font-family:var(--font-mono);font-size:12px;font-weight:700">${usd(val)}</span></div>
+        <div class="desk-progress"><span style="width:${Math.round(val/maxCat*100)}%"></span></div>
+      </div>`).join("")}
+    </div>` : ""}
+
+    ${soon.length ? `
+    <div style="font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:11px">Next 30 days</div>
+    <div style="background:var(--bg-raised);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
+      ${soon.map(s => `
+      <div style="display:flex;gap:10px;padding:11px 13px;border-bottom:1px solid var(--border)">
+        <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);width:60px;flex-shrink:0">${fmtDate(s.renewal_date).replace(/, \d{4}$/,"")}</span>
+        <span style="flex:1;font-size:12.5px">${s.name}</span>
+        <span style="font-family:var(--font-mono);font-size:12px;font-weight:700">${usd(s.amount)}</span>
+      </div>`).join("")}
+    </div>` : ""}
+  </div>
+</div>`;
+}
+window.techStackDesktopHTML = techStackDesktopHTML;
+
+window.filterStackDesktop = function(q) {
+  const term = q.toLowerCase();
+  document.querySelectorAll(".desk-stack-row").forEach(row => {
+    row.style.display = !term || row.textContent.toLowerCase().includes(term) ? "" : "none";
+  });
+};

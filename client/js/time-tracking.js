@@ -14,9 +14,15 @@ window.runningEntry = function() {
 
 window.entryMinutes = function(t) {
   if (t.duration_min != null) return t.duration_min;
-  const end = t.ended_at ? new Date(t.ended_at) : new Date();
-  return Math.max(0, Math.round((end - new Date(t.started_at)) / 60000));
+  const pausedSec = Number(t.paused_total_sec) || 0;
+  // Currently paused — freeze the clock at the moment pause began, minus
+  // whatever had already been paused in earlier pause/resume cycles.
+  const end = t.ended_at ? new Date(t.ended_at) : (t.paused_at ? new Date(t.paused_at) : new Date());
+  const rawMs = end - new Date(t.started_at);
+  return Math.max(0, Math.round(rawMs / 60000 - pausedSec / 60));
 };
+
+window.isEntryPaused = function(t) { return !!(t && t.paused_at && !t.ended_at); };
 
 window.fmtDur = function(min) {
   const h = Math.floor(min / 60), m = min % 60;
@@ -78,9 +84,36 @@ window.stopTimer = async function(silent) {
     await db.update("time_entries", t.id, {
       ended_at:     new Date().toISOString(),
       duration_min: mins,
+      paused_at:    null,
     });
     _stopTick();
     if (!silent) await loadAll();
+  } catch (e) { alert(e.message); }
+};
+
+// ── Pause / resume ──────────────────────────────────────────────
+// paused_at marks the moment the current pause began; paused_total_sec
+// accumulates every prior pause span for this entry so entryMinutes()
+// can subtract paused time from the elapsed clock.
+window.pauseTimer = async function(id) {
+  const t = (STATE.data.time_entries || []).find(x => x.id === id);
+  if (!t || t.ended_at || t.paused_at) return;
+  try {
+    await db.update("time_entries", id, { paused_at: new Date().toISOString() });
+    await loadAll();
+  } catch (e) { alert(e.message); }
+};
+
+window.resumeTimer = async function(id) {
+  const t = (STATE.data.time_entries || []).find(x => x.id === id);
+  if (!t || t.ended_at || !t.paused_at) return;
+  try {
+    const addedSec = Math.max(0, Math.round((new Date() - new Date(t.paused_at)) / 1000));
+    await db.update("time_entries", id, {
+      paused_at:        null,
+      paused_total_sec: (Number(t.paused_total_sec) || 0) + addedSec,
+    });
+    await loadAll();
   } catch (e) { alert(e.message); }
 };
 
@@ -237,7 +270,10 @@ window.timeCardHTML = function(p) {
       <button class="btn btn-ghost btn-sm" onclick="openTimeModal('${p.id}')"
         style="font-size:11px">+ log time</button>
       ${isThis
-        ? `<button class="btn btn-danger btn-sm" onclick="stopTimer()" style="font-size:11px">■ stop</button>`
+        ? `${isEntryPaused(running)
+            ? `<button class="btn btn-primary btn-sm" onclick="resumeTimer('${running.id}')" style="font-size:11px">▶ resume</button>`
+            : `<button class="btn btn-ghost btn-sm" onclick="pauseTimer('${running.id}')" style="font-size:11px">⏸ pause</button>`}
+           <button class="btn btn-danger btn-sm" onclick="stopTimer()" style="font-size:11px">■ stop</button>`
         : `<button class="btn btn-primary btn-sm" onclick="startTimer('${p.id}')" style="font-size:11px">▶ start</button>`}
     </div>
   </div>
@@ -245,15 +281,15 @@ window.timeCardHTML = function(p) {
   <!-- Running banner -->
   ${isThis ? `
   <div style="display:flex;align-items:center;gap:10px;padding:12px 20px;
-    background:color-mix(in srgb,var(--accent) 10%,transparent);
-    border-bottom:1px solid color-mix(in srgb,var(--accent) 25%,transparent)">
-    <span style="width:8px;height:8px;border-radius:50%;background:var(--accent);
-      animation:fhpulse 1.6s ease-in-out infinite;flex-shrink:0"></span>
+    background:color-mix(in srgb,${isEntryPaused(running) ? "var(--warning)" : "var(--accent)"} 10%,transparent);
+    border-bottom:1px solid color-mix(in srgb,${isEntryPaused(running) ? "var(--warning)" : "var(--accent)"} 25%,transparent)">
+    <span style="width:8px;height:8px;border-radius:50%;background:${isEntryPaused(running) ? "var(--warning)" : "var(--accent)"};
+      ${isEntryPaused(running) ? "" : "animation:fhpulse 1.6s ease-in-out infinite"};flex-shrink:0"></span>
     <span style="font-family:var(--font-mono);font-size:15px;font-weight:700;
-      color:var(--accent)" data-timer-clock>${fmtDur(entryMinutes(running))}</span>
+      color:${isEntryPaused(running) ? "var(--warning)" : "var(--accent)"}" data-timer-clock>${fmtDur(entryMinutes(running))}</span>
     <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);
       flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-      ${running.description || "running…"}
+      ${isEntryPaused(running) ? "paused — " : ""}${running.description || "running…"}
     </span>
   </div>` : ""}
 
@@ -387,3 +423,121 @@ window.invoiceUnbilled = async function(projectId) {
     alert("Could not create invoice: " + e.message);
   }
 };
+
+// ============================================================
+//  DESKTOP — Time
+//  Standalone page (pinned in the sidebar). Running/paused timer,
+//  this-week hours per project, and the full entry log — all from
+//  real time_entries rows.
+// ============================================================
+function timeDesktopHTML() {
+  const running  = runningEntry();
+  const paused   = isEntryPaused(running);
+  const entries  = STATE.data.time_entries || [];
+  const projects = STATE.data.projects || [];
+
+  const now       = new Date();
+  const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay());
+  weekStart.setHours(0,0,0,0);
+  const thisWeek  = entries.filter(t => new Date(t.started_at) >= weekStart);
+  const weekMin   = thisWeek.reduce((s,t)=>s + entryMinutes(t), 0);
+  const weekVal   = thisWeek.filter(t=>t.billable).reduce((s,t)=>s + entryValue(t), 0);
+  const unbilledAll = entries.filter(t => t.billable && !t.invoiced && t.ended_at);
+  const unbilledVal  = unbilledAll.reduce((s,t)=>s + entryValue(t), 0);
+
+  // Per-project rollup for the week
+  const byProject = {};
+  thisWeek.forEach(t => {
+    if (!t.project_id) return;
+    byProject[t.project_id] = (byProject[t.project_id] || 0) + entryMinutes(t);
+  });
+  const projectRows = Object.entries(byProject)
+    .map(([pid, min]) => ({ p: projects.find(x=>x.id===pid), min }))
+    .filter(r => r.p)
+    .sort((a,b) => b.min - a.min);
+
+  const recent = [...entries]
+    .filter(t => t.ended_at || t === running)
+    .sort((a,b) => new Date(b.started_at) - new Date(a.started_at))
+    .slice(0, 25);
+
+  return `
+<div class="page-section-header">
+  <div>
+    <div class="page-title">Time</div>
+    <div class="page-sub">${fmtDur(weekMin)} logged this week · ${usd(unbilledVal)} unbilled</div>
+  </div>
+</div>
+
+<div class="desk-shell">
+  <div class="desk-col-main">
+    <div style="font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:11px">This week by project</div>
+    ${projectRows.length === 0
+      ? `<div class="empty" style="padding:28px;margin-bottom:26px"><div class="empty-text">no time logged this week.</div></div>`
+      : `<div style="background:var(--bg-raised);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:26px">
+      ${projectRows.map(r => `
+      <div style="display:flex;align-items:center;gap:14px;padding:13px 16px;border-bottom:1px solid var(--border);cursor:pointer" onclick='openProject(${JSON.stringify(r.p).replace(/'/g,"&#39;")})'>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13.5px;font-weight:600;color:var(--text)">${r.p.name}</div>
+          <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);margin-top:2px">${r.p.client_name || "—"}</div>
+        </div>
+        <div style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--text)">${fmtDur(r.min)}</div>
+      </div>`).join("")}
+      </div>`}
+
+    <div style="font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:11px">Recent entries</div>
+    ${recent.length === 0
+      ? `<div class="empty" style="padding:28px"><div class="empty-text">no time logged yet.</div></div>`
+      : `<div style="background:var(--bg-raised);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
+      ${recent.map(t => {
+        const p = projects.find(x => x.id === t.project_id);
+        const isRunning = t === running;
+        return `
+      <div style="display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--border);${isRunning ? "" : "cursor:pointer"}" ${isRunning ? "" : `onclick="openTimeModal('${t.project_id}','${t.id}')"`}>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12.5px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.description || p?.name || "Untitled"}</div>
+          <div style="font-family:var(--font-mono);font-size:10.5px;color:var(--text-muted);margin-top:2px">${p?.name || "—"} · ${fmtDate(t.started_at)}${!t.billable ? " · internal" : t.invoiced ? " · invoiced" : ""}</div>
+        </div>
+        ${isRunning ? `<span style="font-family:var(--font-mono);font-size:11px;color:${isEntryPaused(t)?'var(--warning)':'var(--money-pos)'}">${isEntryPaused(t)?'paused':'running'}</span>` : ""}
+        <span style="font-family:var(--font-mono);font-size:12.5px;font-weight:700;color:var(--text)" ${isRunning ? "data-timer-clock" : ""}>${fmtDur(entryMinutes(t))}</span>
+      </div>`;
+      }).join("")}
+      </div>`}
+  </div>
+
+  <div class="desk-rail narrow">
+    <div style="font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:11px">Timer</div>
+    ${running ? (() => {
+      const proj = projects.find(p => p.id === running.project_id);
+      return `
+    <div class="card" style="margin-bottom:20px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span style="width:7px;height:7px;border-radius:999px;background:${paused?'var(--warning)':'var(--money-pos)'};${paused?'':'animation:fhpulse 1.8s ease-in-out infinite'}"></span>
+        <span style="font-family:var(--font-mono);font-size:11px;color:${paused?'var(--warning)':'var(--money-pos)'}">${paused?'paused':'running'}</span>
+      </div>
+      <div style="font-family:var(--font-mono);font-size:28px;font-weight:700;margin-bottom:6px" data-timer-clock>${fmtDur(entryMinutes(running))}</div>
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:14px;cursor:pointer" onclick='openProject(${JSON.stringify(proj||{}).replace(/'/g,"&#39;")})'>${running.description || proj?.name || "Untitled"}</div>
+      <div style="display:flex;gap:8px">
+        ${paused
+          ? `<button class="btn btn-primary" style="flex:1" onclick="resumeTimer('${running.id}')">Resume</button>`
+          : `<button class="btn btn-ghost" style="flex:1" onclick="pauseTimer('${running.id}')">Pause</button>`}
+        <button class="btn btn-danger" style="flex:1" onclick="stopTimer()">Stop</button>
+      </div>
+    </div>`;
+    })() : `
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-sub" style="margin-bottom:10px">No timer running.</div>
+      <button class="btn btn-primary" style="width:100%" onclick="navigate('projects')">Start from a project →</button>
+    </div>`}
+
+    <div class="desk-chip-row" style="margin-bottom:8px">
+      <div class="desk-chip"><div class="desk-chip-label">This week</div><div class="desk-chip-val">${fmtDur(weekMin)}</div></div>
+      <div class="desk-chip"><div class="desk-chip-label">Week value</div><div class="desk-chip-val" style="color:var(--money-pos)">${usd(weekVal)}</div></div>
+    </div>
+    <div class="desk-chip-row">
+      <div class="desk-chip" style="flex:1 1 100%"><div class="desk-chip-label">Unbilled total</div><div class="desk-chip-val" style="color:var(--warning)">${usd(unbilledVal)}</div></div>
+    </div>
+  </div>
+</div>`;
+}
+window.timeDesktopHTML = timeDesktopHTML;

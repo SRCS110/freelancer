@@ -189,3 +189,75 @@ window.deleteBsNote = async function(id) {
 };
 
 window.brainstormHTML = brainstormHTML;
+
+// ============================================================
+//  DESKTOP — Notes
+//  Grid + an inline detail/editor rail for the selected or new
+//  note, reusing the same bs-title/bs-tags/bs-content fields and
+//  save/delete flow as the existing editor.
+// ============================================================
+function notesDesktopHTML() {
+  const notes = STATE.data.brainstorm || [];
+  const active = window._bsActive || null;
+  const clientTags = notes.filter(n => n.tags).length;
+
+  return `
+<div class="page-section-header">
+  <div>
+    <div class="page-title">Notes</div>
+    <div class="page-sub">${notes.length} note${notes.length!==1?"s":""}${clientTags ? ` · ${clientTags} tagged` : ""}</div>
+  </div>
+  <div class="btn-row">
+    <div style="position:relative" onmouseleave="this.querySelector('.notes-prompt-menu').style.display='none'">
+      <button class="btn btn-ghost" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='block'?'none':'block'">Guided session</button>
+      <div class="notes-prompt-menu" style="display:none;position:absolute;right:0;top:calc(100% + 4px);background:var(--bg-raised);border:1px solid var(--border);border-radius:var(--radius);padding:6px;z-index:20;min-width:180px">
+        ${Object.keys(BS_PROMPTS).map(p => `<div style="padding:8px 10px;font-size:12.5px;border-radius:var(--radius-sm);cursor:pointer" onmouseover="this.style.background='var(--bg-input)'" onmouseout="this.style.background='transparent'" onclick="startPromptedSession('${p.replace(/'/g,"\\'")}')">${p}</div>`).join("")}
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="newBsNote()">+ New note</button>
+  </div>
+</div>
+
+<div class="${active ? "desk-shell" : ""}">
+  <div class="${active ? "desk-col-main" : ""}">
+    ${notes.length === 0
+      ? `<div class="empty"><div class="empty-text">no notes yet. start a guided session or write freely.</div></div>`
+      : `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+          ${notes.map(n => {
+            const isActive = n.id === active;
+            return `
+          <div class="desk-mini-card${isActive ? " dim" : ""}" style="cursor:pointer;min-height:150px;display:flex;flex-direction:column;${isActive?'border-color:var(--accent)':''}" onclick="openBsNote('${n.id}')">
+            <div style="font-size:14px;font-weight:700;margin-bottom:7px">${n.title}</div>
+            <div style="font-size:12.5px;color:var(--text-muted);line-height:1.55;flex:1;overflow:hidden;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical">${(n.content||"").replace(/</g,"&lt;")}</div>
+            <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);margin-top:11px">${fmtDate(n.updated_at)}${n.tags ? " · " + n.tags.split(",")[0].trim() : ""}</div>
+          </div>`;
+          }).join("")}
+        </div>`}
+  </div>
+  ${active ? `<div class="desk-rail wide">${_notesDeskEditorHTML(active)}</div>` : ""}
+</div>`;
+}
+window.notesDesktopHTML = notesDesktopHTML;
+
+function _notesDeskEditorHTML(id) {
+  const n = id === "new" ? null : (STATE.data.brainstorm || []).find(x => x.id === id);
+  const prompts = window._bsPrompts || [];
+  return `
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:9px">
+  <span style="font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted)">${id === "new" ? "New note" : "Editing · " + fmtDate(n?.updated_at)}</span>
+  <span onclick="window._bsActive=null;window._bsPrompts=null;render()" style="cursor:pointer;color:var(--text-muted)">×</span>
+</div>
+<input id="bs-title" value="${n?.title || window._bsPromptType || "untitled"}" placeholder="note title…"
+  style="font-family:var(--font-serif);font-size:22px;background:transparent;border:none;border-bottom:1px solid var(--border);border-radius:0;padding:4px 0;margin-bottom:12px;width:100%"/>
+<input id="bs-tags" value="${n?.tags || ""}" placeholder="tags: strategy, q3, idea…" style="font-size:11px;margin-bottom:16px"/>
+${prompts.length > 0 ? `
+<div style="margin-bottom:16px;display:flex;flex-direction:column;gap:6px">
+  ${prompts.map((p,i) => `<div style="font-family:var(--font-mono);font-size:11px;color:var(--accent)">${i+1}. ${p}</div>`).join("")}
+</div>` : ""}
+<textarea id="bs-content" rows="14" placeholder="${prompts.length > 0 ? "Write your answers here…" : "Start writing…"}"
+  style="font-size:13px;line-height:1.7;resize:vertical;margin-bottom:16px">${n?.content || (prompts.length > 0 ? prompts.map((p,i) => `${i+1}. ${p}\n\n`).join("") : "")}</textarea>
+<div class="btn-row">
+  <button class="btn btn-primary" style="flex:1" onclick="saveBsNote('${id}')">Save note</button>
+  ${id !== "new" ? `<button class="btn btn-danger" onclick="deleteBsNote('${id}')">Delete</button>` : ""}
+</div>`;
+}

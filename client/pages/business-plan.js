@@ -203,3 +203,125 @@ window.exportBP = function() {
 };
 
 window.businessPlanHTML = businessPlanHTML;
+
+// ============================================================
+//  DESKTOP — Business Plan
+//  Same sections/fields as the mobile-friendly editor above, laid
+//  out with a section-progress rail + a completeness sidebar
+//  computed from real field fill-rate (no fabricated "rate in
+//  plan vs. settings" comparison — revenue_model is free text,
+//  not a structured number, so that comparison isn't real data).
+// ============================================================
+const BP_SECTIONS = [
+  { title: "Identity", icon: "◈", keys: ["business_name","tagline","mission","vision"] },
+  { title: "Market", icon: "◉", keys: ["target_market","value_prop","competitors"] },
+  { title: "Business Model", icon: "◫", keys: ["revenue_model","marketing"] },
+  { title: "Goals", icon: "▲", keys: ["goals_90_day","goals_1_year","goals_5_year"] },
+  { title: "SWOT", icon: "◈", keys: ["strengths","weaknesses","opportunities","threats"] },
+  { title: "Notes", icon: "◻", keys: ["notes"] },
+];
+const BP_LABELS = {
+  business_name: "Business name", tagline: "Tagline", mission: "Mission", vision: "Vision",
+  target_market: "Target market", value_prop: "Value proposition", competitors: "Competitors",
+  revenue_model: "Revenue model", marketing: "Marketing strategy",
+  goals_90_day: "90-day goals", goals_1_year: "1-year goals", goals_5_year: "5-year goals",
+  strengths: "Strengths", weaknesses: "Weaknesses", opportunities: "Opportunities", threats: "Threats",
+  notes: "Additional notes",
+};
+
+function businessPlanDesktopHTML() {
+  const bp = STATE.data.business_plan || null;
+  const allKeys = BP_SECTIONS.flatMap(s => s.keys);
+  const filled = allKeys.filter(k => bp?.[k]?.trim()).length;
+  const pct = Math.round((filled / allKeys.length) * 100);
+  const open = allKeys.filter(k => !bp?.[k]?.trim() && k !== "notes");
+
+  const sections = [
+    { title: "Identity", icon: "◈", color: "#6366f1", fields: [
+      { key: "business_name", label: "Business Name", placeholder: "Acme Freelance Co." },
+      { key: "tagline", label: "Tagline / Slogan", placeholder: "Making the web beautiful, one pixel at a time." },
+      { key: "mission", label: "Mission Statement", placeholder: "We exist to…", rows: 3 },
+      { key: "vision", label: "Vision", placeholder: "In 10 years we will be…", rows: 3 },
+    ]},
+    { title: "Market", icon: "◉", color: "#10b981", fields: [
+      { key: "target_market", label: "Target Market", placeholder: "Small SaaS companies, 10-50 employees…", rows: 3 },
+      { key: "value_prop", label: "Value Proposition", placeholder: "We help X do Y so they can Z…", rows: 3 },
+      { key: "competitors", label: "Competitors / Landscape", placeholder: "Upwork, Fiverr, local agencies…", rows: 3 },
+    ]},
+    { title: "Business Model", icon: "◫", color: "#f59e0b", fields: [
+      { key: "revenue_model", label: "Revenue Model", placeholder: "Project-based, monthly retainer, hourly…", rows: 3 },
+      { key: "marketing", label: "Marketing Strategy", placeholder: "LinkedIn, referrals, cold email, SEO…", rows: 3 },
+    ]},
+    { title: "Goals", icon: "▲", color: "#38bdf8", fields: [
+      { key: "goals_90_day", label: "90-Day Goals", placeholder: "Land 3 new clients, hit $10k MRR…", rows: 3 },
+      { key: "goals_1_year", label: "1-Year Goals", placeholder: "Expand to 2 full-time employees…", rows: 3 },
+      { key: "goals_5_year", label: "5-Year Goals", placeholder: "Build a $1M/yr agency…", rows: 3 },
+    ]},
+    { title: "SWOT", icon: "◈", color: "#8b5cf6", swot: true, fields: [
+      { key: "strengths", label: "Strengths", placeholder: "Deep technical expertise, fast delivery…", rows: 3, swotColor: "#10b981" },
+      { key: "weaknesses", label: "Weaknesses", placeholder: "Limited bandwidth, no brand yet…", rows: 3, swotColor: "#f43f5e" },
+      { key: "opportunities", label: "Opportunities", placeholder: "AI wave, underserved niches…", rows: 3, swotColor: "#38bdf8" },
+      { key: "threats", label: "Threats", placeholder: "Commoditization, AI replacing tasks…", rows: 3, swotColor: "#f59e0b" },
+    ]},
+    { title: "Notes", icon: "◻", color: "#64748b", fields: [
+      { key: "notes", label: "Additional Notes", placeholder: "Anything else worth memorializing…", rows: 5 },
+    ]},
+  ];
+
+  return `
+<div class="page-section-header">
+  <div>
+    <div class="page-title">Business Plan</div>
+    <div class="page-sub">${bp?.business_name || "Reed Studio"} · ${bp?.updated_at ? "last saved " + fmtDate(bp.updated_at) : "not yet saved"}</div>
+  </div>
+  <div class="btn-row">
+    <button class="btn btn-ghost" onclick="exportBP()">Export as text</button>
+    <button class="btn btn-primary" id="bp-save-btn" onclick="saveBP()">Save Plan</button>
+  </div>
+</div>
+<div id="bp-msg" style="display:none;margin-bottom:20px"></div>
+
+<div class="desk-shell">
+  <div class="desk-col-list">
+    ${BP_SECTIONS.map(s => {
+      const done = s.keys.filter(k => bp?.[k]?.trim()).length;
+      return `
+    <div class="desk-list-row" style="cursor:default;display:flex;align-items:center;gap:9px">
+      <span style="flex:1;font-size:13px;font-weight:600">${s.title}</span>
+      <span style="font-family:var(--font-mono);font-size:10px;color:${done===s.keys.length?'var(--money-pos)':'var(--warning)'}">${done}/${s.keys.length}</span>
+    </div>`;
+    }).join("")}
+  </div>
+
+  <div class="desk-col-main">
+    ${sections.map(sec => `
+    <div class="card" style="margin-bottom:20px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid var(--border)">
+        <span style="font-size:20px">${sec.icon}</span>
+        <div class="section-title" style="color:${sec.color}">${sec.title}</div>
+      </div>
+      ${sec.swot ? `<div class="grid-2">${sec.fields.map(f => _bpField(f, bp)).join("")}</div>` : sec.fields.map(f => _bpField(f, bp)).join("")}
+    </div>`).join("")}
+  </div>
+
+  <div class="desk-rail narrow">
+    <div style="font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:11px">Completeness</div>
+    <div style="display:flex;align-items:baseline;gap:9px;margin-bottom:10px">
+      <span style="font-family:var(--font-mono);font-size:30px;font-weight:700;letter-spacing:-0.02em">${pct}%</span>
+      <span style="font-size:12.5px;color:var(--text-muted)">${filled} of ${allKeys.length} fields</span>
+    </div>
+    <div class="desk-progress" style="margin-bottom:22px"><span style="width:${pct}%"></span></div>
+
+    ${open.length ? `
+    <div style="font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:11px">Still open</div>
+    <div style="background:var(--bg-raised);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
+      ${open.map(k => `
+      <div style="display:flex;align-items:center;gap:11px;padding:12px 14px;border-bottom:1px solid var(--border)">
+        <span style="flex:1;font-size:12.5px">${BP_LABELS[k]}</span>
+        <span style="font-family:var(--font-mono);font-size:10.5px;color:var(--accent)">fill →</span>
+      </div>`).join("")}
+    </div>` : `<div style="font-size:12.5px;color:var(--money-pos)">everything's filled in.</div>`}
+  </div>
+</div>`;
+}
+window.businessPlanDesktopHTML = businessPlanDesktopHTML;
